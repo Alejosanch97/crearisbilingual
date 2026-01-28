@@ -54,7 +54,6 @@ const CLIL_TIPS = [
     "Always link language to content."
 ];
 
-// Metas SMART Definidas para el 2026
 const INITIAL_GOALS_2026 = [
     { id: 1, text: "Certificar al 100% de los docentes de inglés (B2/C1).", completed: false },
     { id: 2, text: "Implementar semanalmente el 'Parent Homework' (80% participación).", completed: false },
@@ -79,6 +78,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [showVocabModal, setShowVocabModal] = useState(false);
     const [showChallengeModal, setShowChallengeModal] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // <--- ESTADO NUEVO PARA HAMBURGUESA
     const [sessionTip, setSessionTip] = useState("");
 
     const [excelData, setExcelData] = useState({});
@@ -89,7 +89,6 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [simpleVocabList, setSimpleVocabList] = useState([]); 
     const [averageScore, setAverageScore] = useState(0);
 
-    // Estado para Metas 2026 (Local Storage)
     const [goals2026, setGoals2026] = useState(() => {
         const saved = localStorage.getItem("bilingual_goals_2026");
         return saved ? JSON.parse(saved) : INITIAL_GOALS_2026;
@@ -109,7 +108,6 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     
     const navigate = useNavigate();
 
-    // Guardar metas 2026 localmente
     useEffect(() => {
         localStorage.setItem("bilingual_goals_2026", JSON.stringify(goals2026));
     }, [goals2026]);
@@ -172,37 +170,37 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         setIsLoading(false);
     };
 
+    const calculateProgress = (activity) => {
+        const details = excelData.Activity_Details_Form || [];
+        const detail = details.find(d => String(d.ID_Activity) === String(activity.ID_Activity));
+        if (!detail) return 0;
+        const relevantFields = ['Academic_Objective', 'Target_Vocabulary', 'Language_Structures', 'Speaking_Challenge', 'Interactive_Stages', 'Resource_Links', 'Evaluation_Method', 'Evidence_Preview'];
+        const completedFields = relevantFields.filter(field => detail[field] && detail[field].toString().trim() !== "");
+        return Math.min(Math.round((completedFields.length / relevantFields.length) * 100), 100);
+    };
+
+    const getSemaforoLogic = (activity) => {
+        const progress = calculateProgress(activity);
+        if (!activity.Responsable_ID && !activity.Responsable) return { color: "#ef4444", label: "Unassigned" };
+        if (progress < 100) return { color: "#f59e0b", label: `Incomplete (${progress}%)` };
+        return { color: "#10b981", label: "Form Completed" };
+    };
+
     useEffect(() => {
         if (!excelData.Teachers_Users || !userData) return;
         const teacherName = userData.Teacher_Name || userData.name;
         const teacherKey = userData.Teacher_Key || teacherName; 
-
         setAllTeachers(excelData.Teachers_Users);
-
-        const allMyChallenges = (excelData.Weekly_Challenges || []).filter(c => 
-            String(c.Teacher_Key) === String(teacherKey) || String(c.Teacher_Key) === String(teacherName)
-        );
+        const allMyChallenges = (excelData.Weekly_Challenges || []).filter(c => String(c.Teacher_Key) === String(teacherKey) || String(c.Teacher_Key) === String(teacherName));
         setUserChallenges(allMyChallenges);
-
-        const myActs = (excelData.Activities_Calendar || []).filter(a => 
-            String(a.Responsable || a.Teacher || a.Responsable_ID || "").trim().toUpperCase() === String(teacherName).trim().toUpperCase()
-        );
+        const myActs = (excelData.Activities_Calendar || []).filter(a => String(a.Responsable_ID || a.Responsable || "").trim().toUpperCase() === String(teacherName).trim().toUpperCase());
         setUserActivities(myActs);
-
-        let myPlans = (excelData.Lesson_Planners || []).filter(p => 
-            p.Teacher && String(p.Teacher).trim().toUpperCase() === String(teacherName).trim().toUpperCase()
-        );
+        let myPlans = (excelData.Lesson_Planners || []).filter(p => p.Teacher && String(p.Teacher).trim().toUpperCase() === String(teacherName).trim().toUpperCase());
         if (myPlans.length === 0) myPlans = excelData.Lesson_Planners || [];
         setVocabularyData(myPlans);
-
-        const allWords = myPlans
-            .map(p => p["Vocabulary Big 5"] || p.Vocabulary_Big_5)
-            .filter(Boolean).join(',').split(',').map(v => v.trim()).filter(v => v !== "");
+        const allWords = myPlans.map(p => p["Vocabulary Big 5"] || p.Vocabulary_Big_5).filter(Boolean).join(',').split(',').map(v => v.trim()).filter(v => v !== "");
         setSimpleVocabList([...new Set(allWords)]);
-
-        const myObs = (excelData.Class_Observations || []).filter(o => 
-            String(o.Teacher_Name || o.Teacher || "").trim().toUpperCase() === String(teacherName).trim().toUpperCase()
-        );
+        const myObs = (excelData.Class_Observations || []).filter(o => String(o.Teacher_Name || o.Teacher || "").trim().toUpperCase() === String(teacherName).trim().toUpperCase());
         if (myObs.length > 0) {
             const total = myObs.reduce((sum, obs) => sum + (Number(obs.Calculated_Score || obs.Score || 0)), 0);
             setAverageScore((total / myObs.length).toFixed(1));
@@ -219,7 +217,6 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         const activeOnes = getActiveChallenges(userChallenges);
         const prefilledDesc = Array(5).fill("").map((_, i) => activeOnes[i] ? activeOnes[i].Challenge_Description : "");
         const prefilledIds = Array(5).fill(null).map((_, i) => activeOnes[i] ? activeOnes[i].ID_Challenge : null);
-
         setChallengeForm({
             Challenge_Descriptions: prefilledDesc,
             Existing_IDs: prefilledIds,
@@ -268,31 +265,16 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     const toggleChallengeStatus = async (challenge) => {
         const newStatus = challenge.Status === "completed" ? "non completed" : "completed";
-        const updatedChallenges = userChallenges.map(c => 
-            c.ID_Challenge === challenge.ID_Challenge ? { ...c, Status: newStatus } : c
-        );
+        const updatedChallenges = userChallenges.map(c => c.ID_Challenge === challenge.ID_Challenge ? { ...c, Status: newStatus } : c);
         setUserChallenges(updatedChallenges);
         setIsLoading(true);
         try {
             await fetch(API_URL, {
                 method: 'POST',
-                body: JSON.stringify({ 
-                    action: 'update', sheet: "Weekly_Challenges", 
-                    idField: "ID_Challenge", idValue: challenge.ID_Challenge,
-                    data: { Status: newStatus } 
-                })
+                body: JSON.stringify({ action: 'update', sheet: "Weekly_Challenges", idField: "ID_Challenge", idValue: challenge.ID_Challenge, data: { Status: newStatus } })
             });
         } catch (e) { console.error(e); await fetchAllSheets(); }
         setIsLoading(false);
-    };
-
-    const getSemaforoLogic = (activity) => {
-        const hasDetails = (excelData.Activity_Details_Form || []).some(detail => 
-            String(detail.ID_Activity) === String(activity.ID_Activity)
-        );
-        if (!activity.Responsable_ID && !activity.Responsable) return { color: "#ef4444", label: "Unassigned" };
-        if (!hasDetails) return { color: "#f59e0b", label: "Pending Form" };
-        return { color: "#10b981", label: "Form Completed" };
     };
 
     const handleLogoutAction = () => {
@@ -329,31 +311,35 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                         <div className="info-card">
                             <h3>My Responsibilities</h3>
                             <div className="mini-activity-list">
-                                {userActivities.length > 0 ? userActivities.slice(0, 3).map((act, i) => (
-                                    <div key={i} className="mini-act-row">
-                                        <div className="act-info">
-                                            <strong>{act.Event_Name || "Activity"}</strong>
-                                            <span className="semaforo-status" style={{color: getSemaforoLogic(act).color, fontSize: '0.75rem', display: 'block'}}>● {getSemaforoLogic(act).label}</span>
+                                {userActivities.length > 0 ? userActivities.slice(0, 3).map((act, i) => {
+                                    const status = getSemaforoLogic(act);
+                                    const deadlineDate = act.Deadline ? new Date(act.Deadline).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : "No Date";
+                                    return (
+                                        <div key={i} className="mini-act-row" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '10px' }}>
+                                            <div className="act-info" style={{ flex: 1 }}>
+                                                <strong style={{ fontSize: '0.9rem', color: 'var(--dash-text)' }}>{act.Event_Name || "Activity"}</strong>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--dash-text-muted)' }}>📅 Deadline:</span>
+                                                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>{deadlineDate}</span>
+                                                </div>
+                                                <span className="semaforo-status" style={{ color: status.color, fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>● {status.label}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                )) : <p className="empty-msg">No activities found.</p>}
+                                    )
+                                }) : <p className="empty-msg">No activities found.</p>}
                             </div>
                             <button className="btn-link" onClick={() => setActiveTab("activities")}>Fill Forms →</button>
                         </div>
 
                         <div className="info-card">
-                            <h3>Weekly Challenges</h3>
+                            <h3>Period Challenges</h3>
                             <div className="mini-activity-list">
                                 {getActiveChallenges(userChallenges).length > 0 ? getActiveChallenges(userChallenges).map((ch, i) => (
                                     <div key={i} className="mini-act-row">
                                         <div className="act-info">
-                                            <strong style={{textDecoration: ch.Status === 'completed' ? 'line-through' : 'none', fontSize: '0.85rem', color: ch.Status === 'completed' ? '#999' : 'inherit'}}>
-                                                {ch.Challenge_Description}
-                                            </strong>
+                                            <strong style={{textDecoration: ch.Status === 'completed' ? 'line-through' : 'none', fontSize: '0.85rem', color: ch.Status === 'completed' ? '#999' : 'inherit'}}>{ch.Challenge_Description}</strong>
                                         </div>
-                                        <button className={`check-status-btn ${ch.Status === 'completed' ? 'completed' : ''}`} onClick={() => toggleChallengeStatus(ch)} style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem'}}>
-                                            {ch.Status === 'completed' ? '✅' : '⭕'}
-                                        </button>
+                                        <button className={`check-status-btn ${ch.Status === 'completed' ? 'completed' : ''}`} onClick={() => toggleChallengeStatus(ch)} style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem'}}>{ch.Status === 'completed' ? '✅' : '⭕'}</button>
                                     </div>
                                 )) : <p className="empty-msg">No active challenges (15-day cycle).</p>}
                             </div>
@@ -362,8 +348,10 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
                         <div className="info-card">
                             <h3>Vocabulary Big 5</h3>
-                            <div className="vocab-cloud">
-                                {simpleVocabList.slice(0, 10).map((v, i) => <span key={i} className="tag-v">{v}</span>)}
+                            <div className="vocab-cloud" style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
+                                {simpleVocabList.length > 0 ? simpleVocabList.slice(-7).map((v, i, arr) => (
+                                    <span key={i} className="tag-v" style={{ fontSize: '0.9rem', color: 'var(--dash-text)' }}>{v}{i < arr.length - 1 ? "," : ""}</span>
+                                )) : <p className="empty-msg">No vocabulary found.</p>}
                             </div>
                             <button className="btn-link" onClick={() => setShowVocabModal(true)}>View All</button>
                         </div>
@@ -384,17 +372,12 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             </div>
                         </div>
 
-                        {/* NUEVA CARD: METAS SMART 2026 */}
                         <div className="info-card wide-card">
                             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px'}}>
                                 <h3>🚀 Roadmap: Certificación 2026</h3>
-                                <span style={{fontSize:'0.75rem', fontWeight:'bold', color:'white', background:'#ab0505', padding:'5px 12px', borderRadius:'15px'}}>
-                                    {goals2026.filter(g => g.completed).length} / 15 Logradas
-                                </span>
+                                <span style={{fontSize:'0.75rem', fontWeight:'bold', color:'white', background:'#ab0505', padding:'5px 12px', borderRadius:'15px'}}>{goals2026.filter(g => g.completed).length} / 15 Logradas</span>
                             </div>
-
                             <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px'}}>
-                                {/* Columna Pendientes */}
                                 <div>
                                     <p style={{fontSize:'0.7rem', fontWeight:'bold', color:'#64748b', textTransform:'uppercase', marginBottom:'8px'}}>Por Cumplir</p>
                                     <div className="batch-scroll-area" style={{maxHeight:'220px', margin:0, background:'#f8fafc', padding:'10px', borderRadius:'10px'}}>
@@ -406,21 +389,15 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Columna Completadas */}
                                 <div>
                                     <p style={{fontSize:'0.7rem', fontWeight:'bold', color:'#10b981', textTransform:'uppercase', marginBottom:'8px'}}>Logros Alcanzados</p>
                                     <div className="batch-scroll-area" style={{maxHeight:'220px', margin:0, background:'#f0fdf4', padding:'10px', borderRadius:'10px'}}>
-                                        {goals2026.filter(g => g.completed).length > 0 ? (
-                                            goals2026.filter(g => g.completed).map(goal => (
-                                                <div key={goal.id} className="mini-act-row" style={{background:'white', border:'1px solid #bbf7d0', marginBottom:'8px', padding:'10px'}}>
-                                                    <span style={{fontSize:'0.85rem', flex:1, color:'#16a34a', textDecoration:'line-through'}}>{goal.text}</span>
-                                                    <button onClick={() => toggleGoal(goal.id)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem'}}>✅</button>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <p style={{fontSize:'0.8rem', color:'#94a3b8', textAlign:'center', marginTop:'20px'}}>Aún no hay metas marcadas como logradas.</p>
-                                        )}
+                                        {goals2026.filter(g => g.completed).length > 0 ? goals2026.filter(g => g.completed).map(goal => (
+                                            <div key={goal.id} className="mini-act-row" style={{background:'white', border:'1px solid #bbf7d0', marginBottom:'8px', padding:'10px'}}>
+                                                <span style={{fontSize:'0.85rem', flex:1, color:'#16a34a', textDecoration:'line-through'}}>{goal.text}</span>
+                                                <button onClick={() => toggleGoal(goal.id)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem'}}>✅</button>
+                                            </div>
+                                        )) : <p style={{fontSize:'0.8rem', color:'#94a3b8', textAlign:'center', marginTop:'20px'}}>Aún no hay metas marcadas como logradas.</p>}
                                     </div>
                                 </div>
                             </div>
@@ -435,21 +412,28 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     };
 
     return (
-        <div className="dashboard-container">
-            <aside className="sidebar">
+        <div className={`dashboard-container ${isMobileMenuOpen ? "mobile-menu-active" : ""}`}>
+            
+            <button className="hamburger-menu" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                {isMobileMenuOpen ? "✕" : "☰"}
+            </button>
+
+            {isMobileMenuOpen && <div className="sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>}
+
+            <aside className={`sidebar ${isMobileMenuOpen ? "open" : ""}`}>
                 <div className="sidebar-profile">
                     <div className="avatar-circle">{userData.Teacher_Name?.charAt(0)}</div>
                     <h3>{userData.Teacher_Name}</h3>
                     <p className="role-badge">{userData.ROL}</p>
                 </div>
                 <nav className="sidebar-menu">
-                    <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>👤 Profile</button>
-                    <button className={activeTab === "planning" ? "active" : ""} onClick={() => setActiveTab("planning")}>📝 Planning</button>
-                    <button className={activeTab === "activities" ? "active" : ""} onClick={() => setActiveTab("activities")}>📅 Activities</button>
+                    <button className={activeTab === "profile" ? "active" : ""} onClick={() => { setActiveTab("profile"); setIsMobileMenuOpen(false); }}>👤 Profile</button>
+                    <button className={activeTab === "planning" ? "active" : ""} onClick={() => { setActiveTab("planning"); setIsMobileMenuOpen(false); }}>📝 Planning</button>
+                    <button className={activeTab === "activities" ? "active" : ""} onClick={() => { setActiveTab("activities"); setIsMobileMenuOpen(false); }}>📅 Activities</button>
                     {userData.ROL === "Admin" && (
-                        <button className={activeTab === "revision" ? "active" : ""} onClick={() => setActiveTab("revision")}>🔍 Revision</button>
+                        <button className={activeTab === "revision" ? "active" : ""} onClick={() => { setActiveTab("revision"); setIsMobileMenuOpen(false); }}>🔍 Revision</button>
                     )}
-                    <button className="logout-btn-side" onClick={handleLogoutAction} style={{marginTop: 'auto'}}>🚪 Logout</button>
+                    <button className="logout-btn-side" onClick={() => { handleLogoutAction(); setIsMobileMenuOpen(false); }} style={{marginTop: 'auto'}}>🚪 Logout</button>
                 </nav>
             </aside>
 
@@ -457,10 +441,11 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                 <header className="main-header">
                     <div className="header-left">
                         <h2>{activeTab.toUpperCase()}</h2>
-                        <div className="sync-container">
+                        <div className="sync-container" style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
                             <p className={`sync-status ${isLoading ? 'loading' : ''}`}>
                                 {isLoading ? `⏳ Sincronizando: ${syncTime.toFixed(1)}s` : "✅ Cloud Updated"}
                             </p>
+                            <button onClick={fetchAllSheets} disabled={isLoading} className="sync-refresh-btn" title="Sync Data Now">🔄</button>
                         </div>
                     </div>
                 </header>

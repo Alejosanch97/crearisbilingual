@@ -10,7 +10,6 @@ export const ActivitiesEvents = ({ userData }) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [showDetailForm, setShowDetailForm] = useState(false);
 
-    // Estado para el formulario con los campos de tu Excel
     const [detailData, setDetailData] = useState({
         Academic_Objective: "", 
         Target_Vocabulary: "", 
@@ -48,15 +47,12 @@ export const ActivitiesEvents = ({ userData }) => {
 
     const handleOpenForm = (activity) => {
         setSelectedActivity(activity);
-        
-        // BUSCAR LA ÚLTIMA FILA CREADA PARA ESTA ACTIVIDAD
         const existingEntries = allDetails.filter(d => String(d.ID_Activity) === String(activity.ID_Activity));
         const lastEntry = existingEntries.length > 0 ? existingEntries[existingEntries.length - 1] : null;
         
         if (lastEntry) {
-            // Rellenar con los datos encontrados para no mostrar espacios vacíos
             setDetailData({
-                rowId: lastEntry.rowId, // Guardamos el rowId para actualizar la misma fila
+                rowId: lastEntry.rowId,
                 Academic_Objective: lastEntry.Academic_Objective || "",
                 Target_Vocabulary: lastEntry.Target_Vocabulary || "",
                 Language_Structures: lastEntry.Language_Structures || "",
@@ -91,13 +87,18 @@ export const ActivitiesEvents = ({ userData }) => {
         return Math.min(Math.round((completedFields.length / relevantFields.length) * 100), 100);
     };
 
+    // --- CORRECCIÓN: ASIGNACIÓN INSTANTÁNEA (OPTIMISTIC UI) ---
     const handleAssignMe = async (activity) => {
         const userName = userData.Teacher_Name || userData.Full_Name || userData.name;
+
+        // 1. Actualización Visual Inmediata
         const updatedLocal = activities.map(a => 
             a.ID_Activity === activity.ID_Activity 
             ? { ...a, Responsable_ID: userName, Status: "In Progress" } : a
         );
         setActivities(updatedLocal);
+        
+        // 2. Iniciar sincronización en segundo plano
         setIsSyncing(true);
 
         try {
@@ -110,16 +111,33 @@ export const ActivitiesEvents = ({ userData }) => {
                     data: { ...activity, "Responsable_ID": userName, "Status": "In Progress" }
                 })
             });
-        } catch (e) { console.error(e); }
-        setIsSyncing(false);
+            // No llamamos a fetchActivities() aquí para evitar el parpadeo de recarga
+        } catch (e) { 
+            console.error(e);
+            // Si falla, revertimos para que el usuario sepa que no se guardó
+            fetchActivities();
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
+    // --- CORRECCIÓN: GUARDADO INSTANTÁNEO ---
     const handleSaveDetails = async (e) => {
         e.preventDefault();
+        
+        // 1. Crear el objeto de detalle para actualizar el progreso visualmente de inmediato
+        const newDetailEntry = { 
+            ...detailData, 
+            ID_Activity: selectedActivity.ID_Activity,
+            ID_Detail: `DET-${selectedActivity.ID_Activity}`
+        };
+
+        // 2. Actualizar estado local instantáneamente
+        setAllDetails(prev => [...prev.filter(d => d.ID_Activity !== selectedActivity.ID_Activity), newDetailEntry]);
+        
         setIsSyncing(true);
         setShowDetailForm(false);
 
-        // Si existe detailData.rowId, usamos 'update', si no 'create'
         const methodAction = detailData.rowId ? 'update' : 'create';
 
         try {
@@ -129,17 +147,17 @@ export const ActivitiesEvents = ({ userData }) => {
                     action: methodAction,
                     sheet: "Activity_Details_Form",
                     rowId: detailData.rowId || null,
-                    data: { 
-                        ...detailData, 
-                        ID_Activity: selectedActivity.ID_Activity,
-                        ID_Detail: `DET-${selectedActivity.ID_Activity}`
-                    }
+                    data: newDetailEntry
                 })
             });
-            await fetchAllDetails(); 
-            await fetchActivities(); 
-        } catch (e) { console.error(e); }
-        setIsSyncing(false);
+            // Recargamos detalles en silencio para obtener los rowIds nuevos
+            fetchAllDetails(); 
+        } catch (e) { 
+            console.error(e);
+            fetchActivities();
+        } finally {
+            setIsSyncing(false);
+        }
     };
 
     const getSemaforoLogic = (activity) => {
@@ -157,7 +175,7 @@ export const ActivitiesEvents = ({ userData }) => {
                     <p>Calendario institucional y diseño pedagógico.</p>
                 </div>
                 <div className={`sync-indicator ${isSyncing ? 'syncing' : 'synced'}`}>
-                    {isSyncing ? "⏳ Syncing..." : "✅ Cloud Synchronized"}
+                    {isSyncing ? "⏳ Syncing with Cloud..." : "✅ Cloud Synchronized"}
                 </div>
             </header>
 
@@ -165,8 +183,15 @@ export const ActivitiesEvents = ({ userData }) => {
                 {activities.map((act) => {
                     const statusInfo = getSemaforoLogic(act);
                     const progress = calculateProgress(act);
+                    const isMyActivity = act.Responsable_ID === (userData.Teacher_Name || userData.Full_Name || userData.name);
+
                     return (
-                        <div key={act.ID_Activity} className="individual-grade-card" style={{ borderLeft: `6px solid ${statusInfo.color}`, padding: '20px' }}>
+                        <div key={act.ID_Activity} className="individual-grade-card" 
+                             style={{ 
+                                borderLeft: `6px solid ${statusInfo.color}`, 
+                                padding: '20px',
+                                transition: 'all 0.3s ease' // Para que el cambio de color sea suave
+                             }}>
                             <div className="card-tag" style={{ background: statusInfo.color }}>{statusInfo.label}</div>
                             <h3 style={{marginTop: '10px'}}>{act.Event_Name}</h3>
                             <p style={{ fontSize: '0.85rem', color: '#64748b', minHeight: '50px' }}>{act.Description}</p>
@@ -181,8 +206,8 @@ export const ActivitiesEvents = ({ userData }) => {
                                         🙋‍♂️ I'll take it
                                     </button>
                                 ) : (
-                                    (act.Responsable_ID === (userData.Teacher_Name || userData.Full_Name || userData.name)) && (
-                                        <button className="btn-sync" style={{width: '100%'}} onClick={() => handleOpenForm(act)}>
+                                    isMyActivity && (
+                                        <button className="btn-sync" style={{width: '100%', cursor: 'pointer'}} onClick={() => handleOpenForm(act)}>
                                             {progress === 100 ? "✅ Edit Completed Form" : "📝 Continue Design"}
                                         </button>
                                     )

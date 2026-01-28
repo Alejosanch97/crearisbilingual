@@ -57,7 +57,7 @@ export const Home = ({ onLoginSuccess }) => {
                 <div className="brand">
 					<div className="logo-icon">
 						<img
-							src="/crear.ico"
+							src="https://i.pinimg.com/736x/1c/fc/8b/1cfc8b1ab0460021e731dd82d17abb72.jpg"
 							alt="Logo Crear School"
 						/>
 					</div>
