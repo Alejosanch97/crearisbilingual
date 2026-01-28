@@ -1,0 +1,296 @@
+:root {
+    --primary-color: #02308b; /* Magenta de Dory */
+    --primary-hover: #c92d94;
+    --bg-light: #f8fafc;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --white: #ffffff;
+}
+
+/* =========================================
+   ESTRUCTURA DIVIDIDA (50/50)
+   ========================================= */
+.login-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Lado Izquierdo: Información y Color */
+.login-info-side {
+    flex: 1;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.5s ease;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 50px;
+}
+
+.logo-icon {
+    background: white;
+    color: var(--primary-color);
+    border-radius: 8px;
+    padding: 2px 10px;
+    font-size: 1.2rem;
+}
+
+.info-content h1 {
+    font-size: 4.5rem;
+    margin: 0 0 10px 0;
+    font-weight: 800;
+}
+
+.subtitle {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    font-weight: 400;
+}
+
+.description {
+    opacity: 0.9;
+    max-width: 450px;
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+/* Lado Derecho: Formulario */
+.login-form-side {
+    flex: 1;
+    background-color: var(--bg-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Contenedor del Logo */
+.logo-icon {
+    width: 100px;          /* Ajusta el tamaño según prefieras */
+    height: 100px;
+    border-radius: 50%;   /* Lo hace redondo */
+    overflow: hidden;     /* Recorta la imagen sobrante */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;    /* Fondo blanco por si la imagen tarda en cargar */
+    border: 2px solid rgba(255, 255, 255, 0.3); /* Un borde sutil decorativo */
+    flex-shrink: 0;       /* Evita que se aplaste si hay mucho texto */
+}
+
+/* Imagen dentro del contenedor */
+.logo-icon img {
+    width: 100%;          /* Ocupa todo el ancho del círculo */
+    height: 100%;         /* Ocupa todo el alto del círculo */
+    object-fit: cover;    /* Mantiene la proporción sin estirarse */
+    display: block;
+}
+
+/* Ajuste adicional a la clase 'brand' para alinear el logo con el texto */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;            /* Espacio entre el logo y el nombre 'Crear School' */
+    margin-bottom: 40px;  /* Espacio inferior */
+}
+
+/* =========================================
+   TARJETA DE LOGIN
+   ========================================= */
+.login-card {
+    background: var(--white);
+    padding: 50px 40px;
+    border-radius: 28px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+    text-align: center;
+}
+
+.login-card h2 {
+    font-size: 2rem;
+    color: var(--text-dark);
+    margin-bottom: 30px;
+    font-weight: 700;
+}
+
+/* Campos de entrada */
+.user-fixed {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.user-fixed label {
+    display: block;
+    color: var(--text-gray);
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.fixed-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: var(--text-dark);
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.fixed-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(227, 58, 170, 0.1);
+}
+
+/* Botón de Entrada */
+.btn-login {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(227, 58, 170, 0.3);
+}
+
+.btn-login:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.error-text {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 15px;
+}
+
+
+/* =========================================
+   RESPONSIVE (Móviles)
+   ========================================= */
+/* =========================================
+   RESPONSIVE: TABLETS (768px a 1024px)
+   ========================================= */
+@media (max-width: 1024px) {
+    .login-info-side {
+        padding: 40px;
+    }
+
+    .info-content h1 {
+        font-size: 3.2rem; /* Reducción proporcional para no romper el layout */
+    }
+
+    .subtitle {
+        font-size: 1.5rem;
+    }
+}
+
+/* =========================================
+   RESPONSIVE: CELULARES Y TABLETS VERTICALES
+   ========================================= */
+@media (max-width: 850px) {
+    .login-container {
+        flex-direction: column; /* Cambio de 50/50 a stack vertical */
+        height: auto;
+        overflow-y: visible;
+    }
+
+    .login-info-side {
+        flex: none;
+        width: 100%;
+        min-height: 40vh; /* El lado azul ahora ocupa la parte superior */
+        padding: 40px 20px;
+        text-align: center;
+        align-items: center;
+    }
+
+    .brand {
+        margin-bottom: 30px;
+        justify-content: center;
+    }
+
+    .info-content h1 {
+        font-size: 2.8rem;
+    }
+
+    .subtitle {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+
+    .description {
+        margin: 0 auto;
+        font-size: 1rem;
+    }
+
+    .login-form-side {
+        flex: none;
+        width: 100%;
+        padding: 40px 15px;
+        background-color: var(--bg-light);
+    }
+
+    .login-card {
+        padding: 30px 20px;
+        max-width: 100%; /* La tarjeta se ajusta al ancho del móvil */
+        box-shadow: none; /* Opcional: limpiar sombras pesadas en móvil */
+        border-radius: 20px;
+    }
+}
+
+/* =========================================
+   RESPONSIVE: CELULARES PEQUEÑOS
+   ========================================= */
+@media (max-width: 480px) {
+    .info-content h1 {
+        font-size: 2.2rem;
+    }
+
+    .subtitle {
+        font-size: 1.1rem;
+    }
+
+    .login-card h2 {
+        font-size: 1.6rem;
+    }
+
+    .fixed-input {
+        padding: 12px 15px; /* Inputs ligeramente más compactos */
+    }
+
+    .btn-login {
+        padding: 14px;
+    }
+}
