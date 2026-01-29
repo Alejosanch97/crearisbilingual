@@ -33,12 +33,17 @@ export const PlanningCLIL = ({ userData }) => {
     const [showForm, setShowForm] = useState(false);
     const [selectedSummary, setSelectedSummary] = useState(null);
     
-    // Estados para Filtros
+    // Nuevo estado para rastrear los frames manuales escritos por el usuario
+    const [customFrame, setCustomFrame] = useState("");
+    const [localCustomFrames, setLocalCustomFrames] = useState([]);
+    
     const [filterGrade, setFilterGrade] = useState("");
     const [filterSubject, setFilterSubject] = useState("");
+    const [filterTerm, setFilterTerm] = useState("");
     
     const userGrades = userData.Assigned_Grade?.split(',').map(g => g.trim()) || [];
     const userSubjects = userData.Assigned_Subject?.split(',').map(s => s.trim()) || [];
+    const terms = ["First Term", "Second Term", "Third Term", "Fourth Term"];
 
     const [selectedGrades, setSelectedGrades] = useState([]);
     const [formsData, setFormsData] = useState({});
@@ -53,6 +58,11 @@ export const PlanningCLIL = ({ userData }) => {
             if (Array.isArray(data)) setPlannings(data);
         } catch (e) { console.error("Error:", e); }
         setIsSyncing(false);
+    };
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "";
+        return dateStr.split('T')[0];
     };
 
     const handleDelete = async (plan) => {
@@ -80,7 +90,9 @@ export const PlanningCLIL = ({ userData }) => {
             [grade]: {
                 ...plan,
                 "Thinking Skill": typeof plan["Thinking Skill"] === 'string' ? plan["Thinking Skill"].split(", ") : plan["Thinking Skill"],
-                "Language Frame": typeof plan["Language Frame"] === 'string' ? plan["Language Frame"].split(", ") : plan["Language Frame"]
+                "Language Frame": typeof plan["Language Frame"] === 'string' ? plan["Language Frame"].split(", ") : plan["Language Frame"],
+                "Start Date": formatDate(plan["Start Date"]),
+                "Finish Date": formatDate(plan["Finish Date"])
             }
         });
         setShowForm(true);
@@ -99,20 +111,24 @@ export const PlanningCLIL = ({ userData }) => {
             setFormsData(updated);
         } else {
             setSelectedGrades([...selectedGrades, grade]);
-            setFormsData({
-                ...formsData,
+            setFormsData(prev => ({
+                ...prev,
                 [grade]: {
-                    Grade: grade, Subject: "", Topic: "", "The Hook": "", "Vocabulary Big 5": "",
+                    Grade: grade, Subject: "", Topic: "", Objective: "", Term: "", Session_Number: "",
+                    "Start Date": "", "Finish Date": "", "The Hook": "", "Vocabulary Big 5": "",
                     "Thinking Skill": [], "Language Frame": [], "Thinking Routine": "",
                     "Richmond Resources": "", "Activity Link": "", "Parent Task": "",
                     "Weekly Challenge": "", "% Status": "0%", ID_Setup: `ID-${Date.now()}-${grade}`
                 }
-            });
+            }));
         }
     };
 
     const handleInputChange = (grade, field, value) => {
-        setFormsData({ ...formsData, [grade]: { ...formsData[grade], [field]: value } });
+        setFormsData(prev => ({ 
+            ...prev, 
+            [grade]: { ...prev[grade], [field]: value } 
+        }));
     };
 
     const handleMultiSelect = (grade, field, value) => {
@@ -121,17 +137,32 @@ export const PlanningCLIL = ({ userData }) => {
         handleInputChange(grade, field, updated);
     };
 
+    const handleAddCustomFrame = (grade) => {
+        if (!customFrame.trim()) return;
+        
+        // 1. Agregarlo a la lista de frames locales para que se vea en el scroll
+        if (!localCustomFrames.includes(customFrame)) {
+            setLocalCustomFrames([...localCustomFrames, customFrame]);
+        }
+        
+        // 2. Seleccionarlo automáticamente para este grado
+        handleMultiSelect(grade, "Language Frame", customFrame);
+        
+        // 3. Limpiar input
+        setCustomFrame("");
+    };
+
     const handleSaveToQueue = (e) => {
         e.preventDefault();
         const formatted = Object.values(formsData).map(entry => ({
-            ...entry,
+            ...JSON.parse(JSON.stringify(entry)),
             "Thinking Skill": Array.isArray(entry["Thinking Skill"]) ? entry["Thinking Skill"].join(", ") : entry["Thinking Skill"],
             "Language Frame": Array.isArray(entry["Language Frame"]) ? entry["Language Frame"].join(", ") : entry["Language Frame"],
             isLocal: true
         }));
-        setPlannings([...formatted, ...plannings]);
-        setSyncQueue([...syncQueue, ...formatted]);
-        setShowForm(false); setSelectedGrades([]); setFormsData({});
+        setPlannings(prev => [...formatted, ...prev]);
+        setSyncQueue(prev => [...prev, ...formatted]);
+        setShowForm(false); setSelectedGrades([]); setFormsData({}); setLocalCustomFrames([]);
     };
 
     const syncWithExcel = async () => {
@@ -150,14 +181,22 @@ export const PlanningCLIL = ({ userData }) => {
         setIsSyncing(false);
     };
 
-    // --- LÓGICA DE FILTRADO Y LÍMITE ---
+    const renderLinks = (links) => {
+        if (!links) return "No links provided";
+        return links.split(',').map((link, idx) => (
+            <a key={idx} href={link.trim()} target="_blank" rel="noopener noreferrer" className="link-item" style={{marginRight: '10px', color: '#2563eb', textDecoration: 'underline'}}>
+                🔗 Link {idx + 1}
+            </a>
+        ));
+    };
+
     const filteredPlannings = plannings.filter(p => {
         return (filterGrade === "" || p.Grade === filterGrade) &&
-               (filterSubject === "" || p.Subject === filterSubject);
+               (filterSubject === "" || p.Subject === filterSubject) &&
+               (filterTerm === "" || p.Term === filterTerm);
     });
 
-    // Si no hay filtros aplicados, mostramos solo los últimos 7. Si hay filtros, mostramos todo.
-    const isFiltered = filterGrade !== "" || filterSubject !== "";
+    const isFiltered = filterGrade !== "" || filterSubject !== "" || filterTerm !== "";
     const displayedPlannings = isFiltered ? filteredPlannings : filteredPlannings.slice(0, 7);
 
     return (
@@ -165,7 +204,7 @@ export const PlanningCLIL = ({ userData }) => {
             <header className="page-header">
                 <div className="title-section">
                     <h1>CLIL Lesson Planner</h1>
-                    <p>Múltiples grados, contenidos independientes.</p>
+                    <p>Independent content management per grade.</p>
                 </div>
                 <div className="header-actions">
                     {syncQueue.length > 0 && (
@@ -179,24 +218,30 @@ export const PlanningCLIL = ({ userData }) => {
                 </div>
             </header>
 
-            {/* SECCIÓN DE FILTROS */}
             <div className="filters-container">
                 <div className="filter-group">
-                    <label>Filter by Grade:</label>
+                    <label>Grade:</label>
                     <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}>
-                        <option value="">All Grades (Showing last 7)</option>
+                        <option value="">All Grades</option>
                         {userGrades.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                 </div>
                 <div className="filter-group">
-                    <label>Filter by Subject:</label>
+                    <label>Subject:</label>
                     <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
                         <option value="">All Subjects</option>
                         {userSubjects.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
-                {(filterGrade || filterSubject) && (
-                    <button className="btn-clear" onClick={() => { setFilterGrade(""); setFilterSubject(""); }}>Clear Filters</button>
+                <div className="filter-group">
+                    <label>Term:</label>
+                    <select value={filterTerm} onChange={(e) => setFilterTerm(e.target.value)}>
+                        <option value="">All Terms</option>
+                        {terms.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                </div>
+                {isFiltered && (
+                    <button className="btn-clear" onClick={() => { setFilterGrade(""); setFilterSubject(""); setFilterTerm(""); }}>Clear Filters</button>
                 )}
             </div>
 
@@ -206,7 +251,7 @@ export const PlanningCLIL = ({ userData }) => {
                         <h3>1. Select grades to plan:</h3>
                         <div className="grade-selector">
                             {userGrades.map(g => (
-                                <button key={g} className={`grade-chip ${selectedGrades.includes(g) ? 'active' : ''}`} onClick={() => toggleGradeSelection(g)}>{g}</button>
+                                <button key={g} type="button" className={`grade-chip ${selectedGrades.includes(g) ? 'active' : ''}`} onClick={() => toggleGradeSelection(g)}>{g}</button>
                             ))}
                         </div>
                     </div>
@@ -214,7 +259,8 @@ export const PlanningCLIL = ({ userData }) => {
                         {selectedGrades.map((grade) => (
                             <div key={grade} className="individual-grade-card">
                                 <div className="card-tag">{grade}</div>
-                                <div className="grid-2">
+                                
+                                <div className="grid-3">
                                     <div className="input-group">
                                         <label>Subject</label>
                                         <select required value={formsData[grade].Subject} onChange={(e) => handleInputChange(grade, "Subject", e.target.value)}>
@@ -223,10 +269,40 @@ export const PlanningCLIL = ({ userData }) => {
                                         </select>
                                     </div>
                                     <div className="input-group">
+                                        <label>Term</label>
+                                        <select required value={formsData[grade].Term} onChange={(e) => handleInputChange(grade, "Term", e.target.value)}>
+                                            <option value="">Select Term...</option>
+                                            {terms.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Session Number</label>
+                                        <input type="number" required value={formsData[grade].Session_Number} onChange={(e) => handleInputChange(grade, "Session_Number", e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="grid-2">
+                                    <div className="input-group">
+                                        <label>Start Date</label>
+                                        <input type="date" required value={formsData[grade]["Start Date"]} onChange={(e) => handleInputChange(grade, "Start Date", e.target.value)} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Finish Date</label>
+                                        <input type="date" required value={formsData[grade]["Finish Date"]} onChange={(e) => handleInputChange(grade, "Finish Date", e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="grid-2">
+                                    <div className="input-group">
                                         <label>Topic</label>
                                         <input type="text" required value={formsData[grade].Topic} placeholder="Theme" onChange={(e) => handleInputChange(grade, "Topic", e.target.value)} />
                                     </div>
+                                    <div className="input-group">
+                                        <label>Objective</label>
+                                        <input type="text" required value={formsData[grade].Objective} placeholder="Learning Goal" onChange={(e) => handleInputChange(grade, "Objective", e.target.value)} />
+                                    </div>
                                 </div>
+
                                 <div className="clil-selector-grid">
                                     <div className="clil-box">
                                         <label>Thinking Skills</label>
@@ -243,7 +319,31 @@ export const PlanningCLIL = ({ userData }) => {
                                     </div>
                                     <div className="clil-box">
                                         <label>Language Frames</label>
+                                        <div className="clil-custom-add" style={{padding: '10px', display: 'flex', gap: '5px'}}>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Add custom frame..." 
+                                                value={customFrame} 
+                                                onChange={(e) => setCustomFrame(e.target.value)} 
+                                                style={{fontSize: '0.8rem', flex: 1}} 
+                                            />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => handleAddCustomFrame(grade)} 
+                                                className="btn-view" 
+                                                style={{padding: '5px 10px'}}
+                                            >+</button>
+                                        </div>
                                         <div className="clil-scroll">
+                                            {/* SECCIÓN NUEVA: Frames personalizados agregados por el usuario */}
+                                            {localCustomFrames.length > 0 && (
+                                                <div className="clil-cat">
+                                                    <strong>USER CUSTOM</strong>
+                                                    {localCustomFrames.map(cf => (
+                                                        <div key={cf} className={`clil-option ${formsData[grade]["Language Frame"]?.includes(cf) ? 'active' : ''}`} onClick={() => handleMultiSelect(grade, "Language Frame", cf)}>{cf}</div>
+                                                    ))}
+                                                </div>
+                                            )}
                                             {Object.entries(CLIL_RESOURCES.languageFrames).map(([cat, frames]) => (
                                                 <div key={cat} className="clil-cat">
                                                     <strong>{cat.toUpperCase()}</strong>
@@ -255,6 +355,7 @@ export const PlanningCLIL = ({ userData }) => {
                                         </div>
                                     </div>
                                 </div>
+
                                 <div className="grid-3">
                                     <div className="input-group">
                                         <label>Thinking Routine</label>
@@ -268,15 +369,16 @@ export const PlanningCLIL = ({ userData }) => {
                                         <input type="text" value={formsData[grade]["Vocabulary Big 5"]} placeholder="Word1, Word2..." onChange={(e) => handleInputChange(grade, "Vocabulary Big 5", e.target.value)} />
                                     </div>
                                     <div className="input-group">
-                                        <label>Richmond Resources</label>
-                                        <input type="text" value={formsData[grade]["Richmond Resources"]} onChange={(e) => handleInputChange(grade, "Richmond Resources", e.target.value)} />
+                                        <label>Resources</label>
+                                        <input type="text" value={formsData[grade]["Richmond Resources"]} placeholder="Richmond / Digital" onChange={(e) => handleInputChange(grade, "Richmond Resources", e.target.value)} />
                                     </div>
                                 </div>
+
                                 <div className="grid-2">
-                                    <textarea placeholder="The Hook (Activity)" value={formsData[grade]["The Hook"]} onChange={(e) => handleInputChange(grade, "The Hook", e.target.value)} />
+                                    <textarea placeholder="The Hook (Activity Description)" value={formsData[grade]["The Hook"]} onChange={(e) => handleInputChange(grade, "The Hook", e.target.value)} />
                                     <div className="grid-vertical">
-                                        <input type="text" placeholder="Activity Link" value={formsData[grade]["Activity Link"]} onChange={(e) => handleInputChange(grade, "Activity Link", e.target.value)} />
-                                        <input type="text" placeholder="Parent Task" value={formsData[grade]["Parent Task"]} onChange={(e) => handleInputChange(grade, "Parent Task", e.target.value)} />
+                                        <input type="text" placeholder="Activity Links (comma separated)" value={formsData[grade]["Activity Link"]} onChange={(e) => handleInputChange(grade, "Activity Link", e.target.value)} />
+                                        <input type="text" placeholder="Homework / Parent Task" value={formsData[grade]["Parent Task"]} onChange={(e) => handleInputChange(grade, "Parent Task", e.target.value)} />
                                         <input type="text" placeholder="Weekly Challenge" value={formsData[grade]["Weekly Challenge"]} onChange={(e) => handleInputChange(grade, "Weekly Challenge", e.target.value)} />
                                     </div>
                                 </div>
@@ -289,13 +391,33 @@ export const PlanningCLIL = ({ userData }) => {
 
             <div className="table-card">
                 <table className="modern-table">
-                    <thead><tr><th>Grade</th><th>Subject</th><th>Topic</th><th>Actions</th><th>Status</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Grade / Term</th>
+                            <th>Subject / Session</th>
+                            <th>Topic / Objective / Dates</th>
+                            <th>Actions</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         {displayedPlannings.map((plan, i) => (
                             <tr key={i} className={plan.isLocal ? "row-local" : ""}>
-                                <td><span className="grade-tag">{plan.Grade}</span></td>
-                                <td>{plan.Subject}</td>
-                                <td>{plan.Topic}</td>
+                                <td>
+                                    <span className="grade-tag">{plan.Grade}</span>
+                                    <div style={{fontSize: '0.7rem', color: '#64748b', marginTop: '4px'}}>{plan.Term}</div>
+                                </td>
+                                <td>
+                                    <strong>{plan.Subject}</strong>
+                                    <div style={{fontSize: '0.75rem'}}>Sess: {plan.Session_Number}</div>
+                                </td>
+                                <td>
+                                    <strong>{plan.Topic}</strong>
+                                    <div style={{fontSize: '0.75rem', color: '#334155'}}>{plan.Objective?.substring(0, 50)}...</div>
+                                    <div style={{fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px'}}>
+                                        📅 {formatDate(plan["Start Date"])} to {formatDate(plan["Finish Date"])}
+                                    </div>
+                                </td>
                                 <td className="actions-cell">
                                     <button className="btn-view" onClick={() => setSelectedSummary(plan)}>👁️</button>
                                     <button className="btn-edit" onClick={() => handleEdit(plan)}>✏️</button>
@@ -306,37 +428,35 @@ export const PlanningCLIL = ({ userData }) => {
                         ))}
                     </tbody>
                 </table>
-                {!isFiltered && filteredPlannings.length > 7 && (
-                    <div className="table-footer-info">Showing last 7 entries. Use filters to see all.</div>
-                )}
             </div>
 
-            {/* MODAL SUMMARY */}
             {selectedSummary && (
                 <div className="modal-overlay" onClick={() => setSelectedSummary(null)}>
                     <div className="scaffolding-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>📌 CLIL Lesson Snapshot</h2>
+                            <h2>📌 {selectedSummary.Topic} (Session {selectedSummary.Session_Number})</h2>
                             <button className="close-x" onClick={() => setSelectedSummary(null)}>×</button>
                         </div>
                         <div className="modal-body">
-                            <div className="snapshot-info">
-                                <p><strong>Topic:</strong> {selectedSummary.Topic}</p>
-                                <p><strong>Subject:</strong> {selectedSummary.Subject}</p>
+                            <div className="snapshot-info" style={{background: 'white', border: 'none', padding: '0'}}>
+                                <p><strong>Subject:</strong> {selectedSummary.Subject} ({selectedSummary.Term})</p>
                                 <p><strong>Key Vocabulary:</strong> {selectedSummary["Vocabulary Big 5"]}</p>
                                 <p><strong>Language Frames:</strong> {selectedSummary["Language Frame"]}</p>
+                                <p><strong>Activity Links:</strong> {renderLinks(selectedSummary["Activity Link"])}</p>
+                                <p><strong>Planned Period:</strong> {formatDate(selectedSummary["Start Date"])} to {formatDate(selectedSummary["Finish Date"])}</p>
                             </div>
                             <hr className="modal-hr" />
                             <div className="narrative-summary">
                                 <h3>🧠 CLIL Summary Paragraph</h3>
                                 <p>
                                     In this CLIL lesson, students worked on <strong>{selectedSummary.Topic}</strong> in the subject <strong>{selectedSummary.Subject}</strong>. 
-                                    The learning process started with a motivating hook <em>"{selectedSummary["The Hook"]}"</em> to activate prior knowledge and generate curiosity. 
-                                    Through guided activities, students developed thinking skills such as <strong>{selectedSummary["Thinking Skill"]}</strong>, 
-                                    supported by the thinking routine <strong>{selectedSummary["Thinking Routine"]}</strong>, which helped structure reflection and understanding. 
-                                    Language scaffolding was provided using the frames <strong>{selectedSummary["Language Frame"]}</strong> to support academic communication throughout the lesson. 
-                                    This resource <strong>{selectedSummary["Richmond Resources"] || "Richmond/Digital materials"}</strong> was used to reinforce content and language integration, 
-                                    and learning was consolidated through a weekly challenge <strong>{selectedSummary["Weekly Challenge"]}</strong>, allowing students to apply their knowledge in a meaningful and contextualized way.
+                                    The objective was <strong>{selectedSummary.Objective}</strong>.
+                                    The learning process started with <em>"{selectedSummary["The Hook"]}"</em>. 
+                                    Students developed thinking skills such as <strong>{selectedSummary["Thinking Skill"]}</strong>, 
+                                    supported by the routine <strong>{selectedSummary["Thinking Routine"]}</strong>. 
+                                    Scaffolding was provided via <strong>{selectedSummary["Language Frame"]}</strong>. 
+                                    Reinforcement: <strong>{selectedSummary["Richmond Resources"] || "Digital materials"}</strong>. 
+                                    Challenge: <strong>{selectedSummary["Weekly Challenge"]}</strong>.
                                 </p>
                             </div>
                         </div>

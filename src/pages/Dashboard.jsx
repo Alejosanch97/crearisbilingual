@@ -78,7 +78,8 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [showVocabModal, setShowVocabModal] = useState(false);
     const [showChallengeModal, setShowChallengeModal] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // <--- ESTADO NUEVO PARA HAMBURGUESA
+    const [showResourceModal, setShowResourceModal] = useState(false); // <--- Modal nuevo
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
     const [sessionTip, setSessionTip] = useState("");
 
     const [excelData, setExcelData] = useState({});
@@ -88,6 +89,8 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [vocabularyData, setVocabularyData] = useState([]); 
     const [simpleVocabList, setSimpleVocabList] = useState([]); 
     const [averageScore, setAverageScore] = useState(0);
+
+    const [resourceLink, setResourceLink] = useState(""); // Estado para el input de link
 
     const [goals2026, setGoals2026] = useState(() => {
         const saved = localStorage.getItem("bilingual_goals_2026");
@@ -119,7 +122,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     };
 
     const getActiveChallenges = (challenges) => {
-        return challenges.filter(c => {
+        return (challenges || []).filter(c => {
             if (!c.Start_Date) return false;
             const start = new Date(c.Start_Date);
             const today = new Date();
@@ -228,6 +231,36 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         setShowChallengeModal(true);
     };
 
+    // Función para agregar Recursos Talleres al primer reto activo
+    const handleAddResource = async () => {
+        const activeChallenges = getActiveChallenges(userChallenges);
+        if (activeChallenges.length === 0) {
+            alert("No hay retos activos para vincular recursos.");
+            return;
+        }
+        const target = activeChallenges[0];
+        const currentResources = target.Bilingual_Resources ? target.Bilingual_Resources + "\n" : "";
+        const updatedResources = currentResources + resourceLink;
+
+        setIsLoading(true);
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "update",
+                    sheet: "Weekly_Challenges",
+                    idField: "ID_Challenge",
+                    idValue: target.ID_Challenge,
+                    data: { Bilingual_Resources: updatedResources }
+                })
+            });
+            setResourceLink("");
+            setShowResourceModal(false);
+            await fetchAllSheets();
+        } catch (err) { console.error(err); }
+        setIsLoading(false);
+    };
+
     const handleChallengeSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -313,14 +346,21 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             <div className="mini-activity-list">
                                 {userActivities.length > 0 ? userActivities.slice(0, 3).map((act, i) => {
                                     const status = getSemaforoLogic(act);
+                                    const startDate = act.Start ? new Date(act.Start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : "---";
                                     const deadlineDate = act.Deadline ? new Date(act.Deadline).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : "No Date";
                                     return (
                                         <div key={i} className="mini-act-row" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '10px' }}>
                                             <div className="act-info" style={{ flex: 1 }}>
                                                 <strong style={{ fontSize: '0.9rem', color: 'var(--dash-text)' }}>{act.Event_Name || "Activity"}</strong>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
-                                                    <span style={{ fontSize: '0.7rem', color: 'var(--dash-text-muted)' }}>📅 Deadline:</span>
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>{deadlineDate}</span>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>🛫 Start:</span>
+                                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#64748b' }}>{startDate}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>🏁 Deadline:</span>
+                                                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#ab0505' }}>{deadlineDate}</span>
+                                                    </div>
                                                 </div>
                                                 <span className="semaforo-status" style={{ color: status.color, fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>● {status.label}</span>
                                             </div>
@@ -347,6 +387,20 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                         </div>
 
                         <div className="info-card">
+                            <h3>Recursos Talleres</h3>
+                            <div className="mini-activity-list" style={{maxHeight: '120px', overflowY: 'auto'}}>
+                                {getActiveChallenges(userChallenges).length > 0 ? (
+                                    getActiveChallenges(userChallenges)[0].Bilingual_Resources?.split('\n').filter(link => link.trim() !== "").map((link, idx) => (
+                                        <div key={idx} style={{marginBottom: '5px'}}>
+                                            <a href={link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'underline', wordBreak: 'break-all'}}>🔗 Recurso {idx + 1}</a>
+                                        </div>
+                                    ))
+                                ) : <p className="empty-msg">No hay recursos vinculados.</p>}
+                            </div>
+                            <button className="btn-link" onClick={() => setShowResourceModal(true)}>+ Agregar Recurso</button>
+                        </div>
+
+                        <div className="info-card">
                             <h3>Vocabulary Big 5</h3>
                             <div className="vocab-cloud" style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
                                 {simpleVocabList.length > 0 ? simpleVocabList.slice(-7).map((v, i, arr) => (
@@ -361,6 +415,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             <div className="tool-links-grid">
                                 <a href="https://taupe-sprinkles-8a613b.netlify.app/" target="_blank" rel="noreferrer" className="tool-box">📊 My DOFA</a>
                                 <a href="https://playful-moxie-a7b0d0.netlify.app/" target="_blank" rel="noreferrer" className="tool-box">📈 Proficiency</a>
+                                <a href="https://docs.google.com/document/d/1gg2fdgI7m43YX3uhzhTRzu1ObnKTYJsS/edit" target="_blank" rel="noreferrer" className="tool-box">📄 Actas</a>
                             </div>
                         </div>
 
@@ -445,12 +500,29 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             <p className={`sync-status ${isLoading ? 'loading' : ''}`}>
                                 {isLoading ? `⏳ Sincronizando: ${syncTime.toFixed(1)}s` : "✅ Cloud Updated"}
                             </p>
-                            <button onClick={fetchAllSheets} disabled={isLoading} className="sync-refresh-btn" title="Sync Data Now">🔄</button>
+                            <button onClick={fetchAllSheets} disabled={isLoading} className="sync-refresh-btn" title="Sync All Tables">🔄</button>
                         </div>
                     </div>
                 </header>
                 <section className="dynamic-section">{renderContent()}</section>
             </main>
+
+            {/* Modal para Recursos Talleres */}
+            {showResourceModal && (
+                <div className="modal-overlay" onClick={() => setShowResourceModal(false)}>
+                    <div className="batch-challenge-window" onClick={e => e.stopPropagation()} style={{maxWidth: '400px'}}>
+                        <div className="batch-header">
+                            <h2>➕ Agregar Recurso</h2>
+                            <button className="batch-close" onClick={() => setShowResourceModal(false)}>×</button>
+                        </div>
+                        <div style={{padding: '20px'}}>
+                            <label style={{fontSize: '0.8rem', fontWeight: 'bold'}}>Link del Recurso:</label>
+                            <input type="url" className="batch-input" value={resourceLink} onChange={e => setResourceLink(e.target.value)} placeholder="https://..." style={{width: '100%', marginTop: '10px'}} />
+                            <button className="batch-submit-btn" style={{marginTop: '20px'}} onClick={handleAddResource}>Guardar en Reto</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showChallengeModal && (
                 <div className="modal-overlay" onClick={() => setShowChallengeModal(false)}>
@@ -493,9 +565,12 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                         <div className="vocab-v2-grid">
                             {vocabularyData.map((plan, idx) => (
                                 <div key={idx} className="vocab-v2-card">
-                                    <div className="vocab-v2-tags"><span className="v2-tag-grade">{plan.Grade}</span><span className="v2-tag-sub">{plan.Subject}</span></div>
-                                    <h4 style={{margin: '10px 0'}}>{plan.Topic}</h4>
-                                    <div className="v2-word-wrap">{String(plan["Vocabulary Big 5"] || "").split(',').map((w, i) => w.trim() && <span key={i} className="v2-word-chip">{w.trim()}</span>)}</div>
+                                    <div className="vocab-v2-meta">
+                                        {/* CORRECCIÓN ESPACIADO GRADO - SUBJECT */}
+                                        <span>{plan.Grade} - {plan.Subject}</span>
+                                        <small>{plan.Unit || "No Unit"}</small>
+                                    </div>
+                                    <p className="vocab-v2-words">{plan["Vocabulary Big 5"] || plan.Vocabulary_Big_5}</p>
                                 </div>
                             ))}
                         </div>

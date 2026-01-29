@@ -9,6 +9,9 @@ export const ActivitiesEvents = ({ userData }) => {
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [showDetailForm, setShowDetailForm] = useState(false);
+    const [summaryData, setSummaryData] = useState(null); // Nuevo estado para datos de resumen
+
+    const isAdmin = userData.ROL?.toUpperCase() === 'ADMIN';
 
     const [detailData, setDetailData] = useState({
         Academic_Objective: "", 
@@ -19,7 +22,9 @@ export const ActivitiesEvents = ({ userData }) => {
         Resource_Links: "",
         Evaluation_Method: "", 
         Evidence_Preview: "", 
-        Budget_Status: "Pending"
+        Budget_Status: "Pending",
+        Feedback: "", 
+        Score: ""
     });
 
     useEffect(() => { 
@@ -45,10 +50,15 @@ export const ActivitiesEvents = ({ userData }) => {
         } catch (e) { console.error(e); }
     };
 
+    // Lógica unificada para extraer datos por ID_Activity (La que pediste mantener)
+    const getExistingDetail = (activityId) => {
+        const existingEntries = allDetails.filter(d => String(d.ID_Activity) === String(activityId));
+        return existingEntries.length > 0 ? existingEntries[existingEntries.length - 1] : null;
+    };
+
     const handleOpenForm = (activity) => {
         setSelectedActivity(activity);
-        const existingEntries = allDetails.filter(d => String(d.ID_Activity) === String(activity.ID_Activity));
-        const lastEntry = existingEntries.length > 0 ? existingEntries[existingEntries.length - 1] : null;
+        const lastEntry = getExistingDetail(activity.ID_Activity);
         
         if (lastEntry) {
             setDetailData({
@@ -61,22 +71,34 @@ export const ActivitiesEvents = ({ userData }) => {
                 Resource_Links: lastEntry.Resource_Links || "",
                 Evaluation_Method: lastEntry.Evaluation_Method || "",
                 Evidence_Preview: lastEntry.Evidence_Preview || "",
-                Budget_Status: lastEntry.Budget_Status || "Pending"
+                Budget_Status: lastEntry.Budget_Status || "Pending",
+                Feedback: lastEntry.Feedback || "",
+                Score: lastEntry.Score || ""
             });
         } else {
             setDetailData({
                 Academic_Objective: "", Target_Vocabulary: "", Language_Structures: "",
                 Speaking_Challenge: "", Interactive_Stages: "", Resource_Links: "",
-                Evaluation_Method: "", Evidence_Preview: "", Budget_Status: "Pending"
+                Evaluation_Method: "", Evidence_Preview: "", Budget_Status: "Pending",
+                Feedback: "", Score: ""
             });
         }
         setShowDetailForm(true);
     };
 
+    // CORRECCIÓN: Nueva función para el ojo que usa la misma lógica de extracción
+    const handleOpenSummary = (activity) => {
+        const lastEntry = getExistingDetail(activity.ID_Activity);
+        if (lastEntry) {
+            setSummaryData({
+                ...lastEntry,
+                Event_Name: activity.Event_Name // Pasamos el nombre para el título del modal
+            });
+        }
+    };
+
     const calculateProgress = (activity) => {
-        const existingEntries = allDetails.filter(d => String(d.ID_Activity) === String(activity.ID_Activity));
-        const detail = existingEntries.length > 0 ? existingEntries[existingEntries.length - 1] : null;
-        
+        const detail = getExistingDetail(activity.ID_Activity);
         if (!detail) return 0;
         const relevantFields = [
             'Academic_Objective', 'Target_Vocabulary', 'Language_Structures', 
@@ -87,77 +109,47 @@ export const ActivitiesEvents = ({ userData }) => {
         return Math.min(Math.round((completedFields.length / relevantFields.length) * 100), 100);
     };
 
-    // --- CORRECCIÓN: ASIGNACIÓN INSTANTÁNEA (OPTIMISTIC UI) ---
     const handleAssignMe = async (activity) => {
         const userName = userData.Teacher_Name || userData.Full_Name || userData.name;
-
-        // 1. Actualización Visual Inmediata
         const updatedLocal = activities.map(a => 
             a.ID_Activity === activity.ID_Activity 
             ? { ...a, Responsable_ID: userName, Status: "In Progress" } : a
         );
         setActivities(updatedLocal);
-        
-        // 2. Iniciar sincronización en segundo plano
         setIsSyncing(true);
-
         try {
             await fetch(API_URL, {
                 method: 'POST',
                 body: JSON.stringify({
-                    action: 'update',
-                    sheet: "Activities_Calendar",
-                    rowId: activity.rowId,
+                    action: 'update', sheet: "Activities_Calendar", rowId: activity.rowId,
                     data: { ...activity, "Responsable_ID": userName, "Status": "In Progress" }
                 })
             });
-            // No llamamos a fetchActivities() aquí para evitar el parpadeo de recarga
-        } catch (e) { 
-            console.error(e);
-            // Si falla, revertimos para que el usuario sepa que no se guardó
-            fetchActivities();
-        } finally {
-            setIsSyncing(false);
-        }
+        } catch (e) { fetchActivities(); }
+        setIsSyncing(false);
     };
 
-    // --- CORRECCIÓN: GUARDADO INSTANTÁNEO ---
     const handleSaveDetails = async (e) => {
         e.preventDefault();
-        
-        // 1. Crear el objeto de detalle para actualizar el progreso visualmente de inmediato
         const newDetailEntry = { 
             ...detailData, 
             ID_Activity: selectedActivity.ID_Activity,
             ID_Detail: `DET-${selectedActivity.ID_Activity}`
         };
-
-        // 2. Actualizar estado local instantáneamente
         setAllDetails(prev => [...prev.filter(d => d.ID_Activity !== selectedActivity.ID_Activity), newDetailEntry]);
-        
         setIsSyncing(true);
         setShowDetailForm(false);
-
         const methodAction = detailData.rowId ? 'update' : 'create';
-
         try {
             await fetch(API_URL, {
                 method: 'POST',
                 body: JSON.stringify({
-                    action: methodAction,
-                    sheet: "Activity_Details_Form",
-                    rowId: detailData.rowId || null,
-                    data: newDetailEntry
+                    action: methodAction, sheet: "Activity_Details_Form", rowId: detailData.rowId || null, data: newDetailEntry
                 })
             });
-            // Recargamos detalles en silencio para obtener los rowIds nuevos
             fetchAllDetails(); 
-        } catch (e) { 
-            console.error(e);
-            fetchActivities();
-        } finally {
-            setIsSyncing(false);
-        }
+        } catch (e) { fetchActivities(); }
+        setIsSyncing(false);
     };
 
     const getSemaforoLogic = (activity) => {
@@ -175,7 +167,7 @@ export const ActivitiesEvents = ({ userData }) => {
                     <p>Calendario institucional y diseño pedagógico.</p>
                 </div>
                 <div className={`sync-indicator ${isSyncing ? 'syncing' : 'synced'}`}>
-                    {isSyncing ? "⏳ Syncing with Cloud..." : "✅ Cloud Synchronized"}
+                    {isSyncing ? "⏳ Syncing..." : "✅ Cloud Synchronized"}
                 </div>
             </header>
 
@@ -184,15 +176,16 @@ export const ActivitiesEvents = ({ userData }) => {
                     const statusInfo = getSemaforoLogic(act);
                     const progress = calculateProgress(act);
                     const isMyActivity = act.Responsable_ID === (userData.Teacher_Name || userData.Full_Name || userData.name);
+                    const hasDetail = getExistingDetail(act.ID_Activity);
 
                     return (
-                        <div key={act.ID_Activity} className="individual-grade-card" 
-                             style={{ 
-                                borderLeft: `6px solid ${statusInfo.color}`, 
-                                padding: '20px',
-                                transition: 'all 0.3s ease' // Para que el cambio de color sea suave
-                             }}>
-                            <div className="card-tag" style={{ background: statusInfo.color }}>{statusInfo.label}</div>
+                        <div key={act.ID_Activity} className="individual-grade-card" style={{ borderLeft: `6px solid ${statusInfo.color}`, padding: '20px' }}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                                <div className="card-tag" style={{ background: statusInfo.color }}>{statusInfo.label}</div>
+                                {hasDetail && (
+                                    <button className="btn-view" style={{cursor: 'pointer'}} onClick={() => handleOpenSummary(act)}>👁️</button>
+                                )}
+                            </div>
                             <h3 style={{marginTop: '10px'}}>{act.Event_Name}</h3>
                             <p style={{ fontSize: '0.85rem', color: '#64748b', minHeight: '50px' }}>{act.Description}</p>
                             
@@ -200,17 +193,22 @@ export const ActivitiesEvents = ({ userData }) => {
                                 <div><strong>Responsible:</strong> {act.Responsable_ID || "🚫 Unassigned"}</div>
                             </div>
 
-                            <div className="actions">
+                            <div className="actions" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                                 {!act.Responsable_ID ? (
-                                    <button className="btn-main" style={{width: '100%'}} onClick={() => handleAssignMe(act)}>
-                                        🙋‍♂️ I'll take it
-                                    </button>
+                                    <button className="btn-main" style={{width: '100%'}} onClick={() => handleAssignMe(act)}>🙋‍♂️ I'll take it</button>
                                 ) : (
-                                    isMyActivity && (
-                                        <button className="btn-sync" style={{width: '100%', cursor: 'pointer'}} onClick={() => handleOpenForm(act)}>
-                                            {progress === 100 ? "✅ Edit Completed Form" : "📝 Continue Design"}
-                                        </button>
-                                    )
+                                    <>
+                                        {isMyActivity && (
+                                            <button className="btn-sync" style={{width: '100%', cursor: 'pointer'}} onClick={() => handleOpenForm(act)}>
+                                                {progress === 100 ? "✅ Edit Completed Form" : "📝 Continue Design"}
+                                            </button>
+                                        )}
+                                        {isAdmin && (
+                                            <button className="btn-view" style={{width: '100%', background: '#2563eb', color: 'white'}} onClick={() => handleOpenForm(act)}>
+                                                ⭐ Evaluate Activity
+                                            </button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -229,6 +227,7 @@ export const ActivitiesEvents = ({ userData }) => {
                             <button className="close-x" onClick={() => setShowDetailForm(false)}>×</button>
                         </div>
                         <form onSubmit={handleSaveDetails} className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            {/* Campos del formulario originales (Se mantienen intactos) */}
                             <div className="input-group" style={{gridColumn: 'span 2'}}>
                                 <label>Academic Objective</label>
                                 <textarea value={detailData.Academic_Objective} required onChange={(e) => setDetailData({...detailData, Academic_Objective: e.target.value})} />
@@ -274,6 +273,19 @@ export const ActivitiesEvents = ({ userData }) => {
                                     <option value="Approved">Approved</option>
                                 </select>
                             </div>
+
+                            {isAdmin && (
+                                <div style={{gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', padding: '15px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd'}}>
+                                    <div className="input-group">
+                                        <label>Score (0-100)</label>
+                                        <input type="number" value={detailData.Score} onChange={(e) => setDetailData({...detailData, Score: e.target.value})} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Feedback</label>
+                                        <input type="text" value={detailData.Feedback} onChange={(e) => setDetailData({...detailData, Feedback: e.target.value})} />
+                                    </div>
+                                </div>
+                            )}
                             
                             <div style={{ gridColumn: 'span 2', marginTop: '10px' }}>
                                 <button type="submit" className="btn-save-all" style={{width: '100%'}} disabled={isSyncing}>
@@ -281,6 +293,42 @@ export const ActivitiesEvents = ({ userData }) => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE RESUMEN (POP UP OJO) - CORREGIDO */}
+            {summaryData && (
+                <div className="modal-overlay" onClick={() => setSummaryData(null)}>
+                    <div className="scaffolding-modal" style={{maxWidth: '600px'}} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Summary: {summaryData.Event_Name}</h2>
+                            <button className="close-x" onClick={() => setSummaryData(null)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="snapshot-info" style={{background: 'white', border: 'none', padding: '0', display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                <p><strong>Academic Objective:</strong> {summaryData.Academic_Objective || "Not filled"}</p>
+                                <p><strong>Target Vocabulary:</strong> {summaryData.Target_Vocabulary || "Not filled"}</p>
+                                <p><strong>Language Structures:</strong> {summaryData.Language_Structures || "Not filled"}</p>
+                                <p><strong>Interactive Stages:</strong> {summaryData.Interactive_Stages || "Not filled"}</p>
+                                <p><strong>Speaking Challenge:</strong> {summaryData.Speaking_Challenge || "Not filled"}</p>
+                                <p><strong>Evaluation Method:</strong> {summaryData.Evaluation_Method || "Not filled"}</p>
+                                <p><strong>Evidence Preview:</strong> {summaryData.Evidence_Preview || "Not filled"}</p>
+                                <p><strong>Resource Links:</strong> {summaryData.Resource_Links || "No links"}</p>
+                                <p><strong>Budget Status:</strong> {summaryData.Budget_Status}</p>
+                                
+                                {(summaryData.Score || summaryData.Feedback) && (
+                                    <div style={{marginTop: '15px', padding: '15px', background: '#f8fafc', borderRadius: '8px', borderLeft: '5px solid #2563eb'}}>
+                                        <h4 style={{margin: '0 0 10px 0', color: '#2563eb'}}>Admin Evaluation</h4>
+                                        {summaryData.Score && <p><strong>Score:</strong> {summaryData.Score}/100</p>}
+                                        {summaryData.Feedback && <p><strong>Feedback:</strong> {summaryData.Feedback}</p>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn-main" style={{width: '100%'}} onClick={() => setSummaryData(null)}>Close View</button>
+                        </div>
                     </div>
                 </div>
             )}
