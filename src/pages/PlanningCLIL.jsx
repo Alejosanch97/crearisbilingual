@@ -33,7 +33,6 @@ export const PlanningCLIL = ({ userData }) => {
     const [showForm, setShowForm] = useState(false);
     const [selectedSummary, setSelectedSummary] = useState(null);
     
-    // Nuevo estado para rastrear los frames manuales escritos por el usuario
     const [customFrame, setCustomFrame] = useState("");
     const [localCustomFrames, setLocalCustomFrames] = useState([]);
     
@@ -48,14 +47,23 @@ export const PlanningCLIL = ({ userData }) => {
     const [selectedGrades, setSelectedGrades] = useState([]);
     const [formsData, setFormsData] = useState({});
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { 
+        if(userData) fetchData(); 
+    }, [userData]);
 
     const fetchData = async () => {
         setIsSyncing(true);
         try {
             const resp = await fetch(`${API_URL}?sheet=Lesson_Planners`);
             const data = await resp.json();
-            if (Array.isArray(data)) setPlannings(data);
+            if (Array.isArray(data)) {
+                // CORRECCIÓN: Filtrar solo las planeaciones del usuario logueado
+                const teacherName = userData.Teacher_Name || userData.name;
+                const myPlannings = data.filter(p => 
+                    String(p.Teacher).trim().toUpperCase() === String(teacherName).trim().toUpperCase()
+                );
+                setPlannings(myPlannings);
+            }
         } catch (e) { console.error("Error:", e); }
         setIsSyncing(false);
     };
@@ -118,7 +126,8 @@ export const PlanningCLIL = ({ userData }) => {
                     "Start Date": "", "Finish Date": "", "The Hook": "", "Vocabulary Big 5": "",
                     "Thinking Skill": [], "Language Frame": [], "Thinking Routine": "",
                     "Richmond Resources": "", "Activity Link": "", "Parent Task": "",
-                    "Weekly Challenge": "", "% Status": "0%", ID_Setup: `ID-${Date.now()}-${grade}`
+                    "Weekly Challenge": "", "% Status": "0%", ID_Setup: `ID-${Date.now()}-${grade}`,
+                    Teacher: userData.Teacher_Name || userData.name // Asegurar que el nombre se guarde
                 }
             }));
         }
@@ -139,16 +148,10 @@ export const PlanningCLIL = ({ userData }) => {
 
     const handleAddCustomFrame = (grade) => {
         if (!customFrame.trim()) return;
-        
-        // 1. Agregarlo a la lista de frames locales para que se vea en el scroll
         if (!localCustomFrames.includes(customFrame)) {
             setLocalCustomFrames([...localCustomFrames, customFrame]);
         }
-        
-        // 2. Seleccionarlo automáticamente para este grado
         handleMultiSelect(grade, "Language Frame", customFrame);
-        
-        // 3. Limpiar input
         setCustomFrame("");
     };
 
@@ -158,6 +161,7 @@ export const PlanningCLIL = ({ userData }) => {
             ...JSON.parse(JSON.stringify(entry)),
             "Thinking Skill": Array.isArray(entry["Thinking Skill"]) ? entry["Thinking Skill"].join(", ") : entry["Thinking Skill"],
             "Language Frame": Array.isArray(entry["Language Frame"]) ? entry["Language Frame"].join(", ") : entry["Language Frame"],
+            Teacher: userData.Teacher_Name || userData.name, // Sincronización de propiedad
             isLocal: true
         }));
         setPlannings(prev => [...formatted, ...prev]);
@@ -197,14 +201,14 @@ export const PlanningCLIL = ({ userData }) => {
     });
 
     const isFiltered = filterGrade !== "" || filterSubject !== "" || filterTerm !== "";
-    const displayedPlannings = isFiltered ? filteredPlannings : filteredPlannings.slice(0, 7);
+    const displayedPlannings = isFiltered ? filteredPlannings : filteredPlannings.slice(0, 15); // Aumentado para ver más registros propios
 
     return (
         <div className="planning-wrapper">
             <header className="page-header">
                 <div className="title-section">
                     <h1>CLIL Lesson Planner</h1>
-                    <p>Independent content management per grade.</p>
+                    <p>Welcome, {userData.Teacher_Name}. Managing your private content.</p>
                 </div>
                 <div className="header-actions">
                     {syncQueue.length > 0 && (
@@ -335,7 +339,6 @@ export const PlanningCLIL = ({ userData }) => {
                                             >+</button>
                                         </div>
                                         <div className="clil-scroll">
-                                            {/* SECCIÓN NUEVA: Frames personalizados agregados por el usuario */}
                                             {localCustomFrames.length > 0 && (
                                                 <div className="clil-cat">
                                                     <strong>USER CUSTOM</strong>
@@ -401,7 +404,7 @@ export const PlanningCLIL = ({ userData }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {displayedPlannings.map((plan, i) => (
+                        {displayedPlannings.length > 0 ? displayedPlannings.map((plan, i) => (
                             <tr key={i} className={plan.isLocal ? "row-local" : ""}>
                                 <td>
                                     <span className="grade-tag">{plan.Grade}</span>
@@ -425,7 +428,9 @@ export const PlanningCLIL = ({ userData }) => {
                                 </td>
                                 <td>{plan.isLocal ? "⏳" : "✅"}</td>
                             </tr>
-                        ))}
+                        )) : (
+                            <tr><td colSpan="5" style={{textAlign:'center', padding:'20px'}}>No plannings found for your user.</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>
