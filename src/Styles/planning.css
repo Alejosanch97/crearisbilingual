@@ -68,6 +68,26 @@
     box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
 }
 
+/* --- CORRECCIÓN BOTÓN CANCELAR --- */
+.planning-wrapper .btn-cancel, 
+.planning-wrapper button[onclick*="cancel"], 
+.planning-wrapper button[type="button"]:not(.btn-main, .btn-sync, .btn-refresh, .grade-chip) {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+
+.planning-wrapper .btn-cancel:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
 /* --- Multi-Grade Selection --- */
 .planning-wrapper .step-box {
     background: #f1f5f9;
@@ -208,21 +228,75 @@
     margin-top: 10px; transition: 0.3s;
 }
 
-/* --- Table Styles --- */
+/* --- Table Styles (CORRECCIÓN DEFINITIVA) --- */
 .planning-wrapper .table-card {
     background: var(--p-white); border-radius: 20px;
     box-shadow: var(--p-shadow); overflow: hidden; margin-top: 40px;
 }
 
 .planning-wrapper .modern-table { width: 100%; border-collapse: collapse; }
-.planning-wrapper .modern-table th { background: #f8fafc; padding: 18px; text-align: left; font-size: 0.8rem; color: var(--p-text-light); text-transform: uppercase; }
-.planning-wrapper .modern-table td { padding: 18px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
-
-.planning-wrapper .btn-view {
-    background: #e0f2fe; color: var(--p-primary-dark); border: none;
-    padding: 6px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s;
+.planning-wrapper .modern-table th { 
+    background: #f8fafc; 
+    padding: 18px; 
+    text-align: left; 
+    font-size: 0.8rem; 
+    color: var(--p-text-light); 
+    text-transform: uppercase; 
+    border-bottom: 2px solid #edf2f7;
 }
+
+.planning-wrapper .modern-table td { 
+    padding: 18px; 
+    border-bottom: 1px solid #f1f5f9; 
+    font-size: 0.9rem; 
+    vertical-align: middle; 
+}
+
+/* CORRECCIÓN: Estilos para las celdas de acción y estatus para que la línea sea continua */
+.planning-wrapper .actions-td {
+    padding: 0 !important; /* Elimina padding para que el contenedor ocupe todo */
+    width: 150px;
+    vertical-align: stretch;
+}
+
+.planning-wrapper .actions-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 60px; /* Asegura un alto mínimo para la alineación */
+    padding: 0 10px;
+}
+
+.planning-wrapper .status-td {
+    text-align: center;
+    font-size: 1.1rem;
+    padding: 0 !important;
+}
+
+/* --- Botones de Acción Internos --- */
+.planning-wrapper .btn-view, .planning-wrapper .btn-edit, .planning-wrapper .btn-del {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 1rem;
+}
+
+.planning-wrapper .btn-view { background: #e0f2fe; color: #0369a1; }
 .planning-wrapper .btn-view:hover { background: var(--p-primary); color: white; }
+
+.planning-wrapper .btn-edit { background: #f0fdf4; color: #166534; }
+.planning-wrapper .btn-edit:hover { background: #22c55e; color: white; }
+
+.planning-wrapper .btn-del { background: #fef2f2; color: #991b1b; }
+.planning-wrapper .btn-del:hover { background: var(--p-danger); color: white; }
 
 /* --- MODAL / POP-UP SUMMARY --- */
 .modal-overlay {
@@ -269,22 +343,20 @@
     flex-grow: 1;
 }
 
-.summary-item { margin-bottom: 20px; }
-.summary-item strong {
-    display: block;
-    color: var(--p-primary);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
+.snapshot-info {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
 }
 
-.summary-item p, .summary-item div {
-    font-size: 1rem;
-    color: var(--p-text);
-    line-height: 1.5;
-    margin: 0;
-}
+.snapshot-info p { margin: 8px 0; font-size: 0.95rem; color: #334155; }
+.snapshot-info strong { color: var(--p-secondary); }
+
+.modal-hr { border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0; }
+
+.narrative-summary h3 { font-size: 1.1rem; color: var(--p-primary); margin-bottom: 15px; font-weight: 800; }
+.narrative-summary p { line-height: 1.7; color: #1e293b; text-align: justify; font-size: 1rem; }
 
 .modal-footer {
     padding: 20px 30px;
@@ -293,19 +365,7 @@
     justify-content: flex-end;
 }
 
-.actions-cell {
-    display: flex;
-    gap: 5px;
-}
-
-.btn-edit { background: #e0f2fe; color: #0369a1; border: none; padding: 6px; border-radius: 6px; cursor: pointer; }
-.btn-del { background: #fee2e2; color: #dc2626; border: none; padding: 6px; border-radius: 6px; cursor: pointer; }
-
-.snapshot-info p { margin: 5px 0; font-size: 0.9rem; }
-.modal-hr { border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0; }
-.narrative-summary h3 { font-size: 1rem; color: var(--p-secondary); margin-bottom: 10px; }
-.narrative-summary p { line-height: 1.6; color: #334155; text-align: justify; }
-
+/* --- Filters Section --- */
 .filters-container {
     display: flex;
     gap: 20px;
@@ -335,6 +395,7 @@
     padding: 10px;
     border-radius: 8px;
     border: 2px solid #f1f5f9;
+    background-color: white;
 }
 
 .btn-clear {
@@ -347,127 +408,51 @@
     font-weight: 600;
 }
 
-.table-footer-info {
-    padding: 15px;
-    text-align: center;
-    font-size: 0.8rem;
-    color: var(--p-text-light);
-    background: #f8fafc;
+/* --- Refresh Button Updated --- */
+.planning-wrapper .btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #f8fafc; 
+    color: var(--p-text);
+    border: 2px solid #e2e8f0; 
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
+
+.planning-wrapper .btn-refresh:hover {
+    background-color: #ffffff;
+    border-color: var(--p-primary); 
+    color: var(--p-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
 /* --- Animations --- */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes modalSlideIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes modalSlideIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
-/* --- Responsive --- */
-/* =========================================
-   RESPONSIVE: TABLETS (Hasta 1024px)
-   ========================================= */
+/* --- Responsive Design --- */
 @media (max-width: 1024px) {
-    .planning-wrapper .grid-3 {
-        grid-template-columns: 1fr 1fr; /* De 3 columnas a 2 */
-    }
-
-    .planning-wrapper .page-header {
-        padding: 15px 20px;
-    }
-
-    .planning-wrapper .clil-selector-grid {
-        gap: 15px;
-    }
+    .planning-wrapper .grid-3 { grid-template-columns: 1fr 1fr; }
+    .planning-wrapper .clil-selector-grid { gap: 15px; }
 }
 
-/* =========================================
-   RESPONSIVE: CELULARES Y TABLETS VERTICALES (Hasta 768px)
-   ========================================= */
 @media (max-width: 768px) {
-    /* Ajuste de Header */
-    .planning-wrapper .page-header {
-        flex-direction: column;
-        gap: 15px;
-        text-align: center;
-    }
-
-    .planning-wrapper .header-actions {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* Grids a una sola columna */
-    .planning-wrapper .grid-2, 
-    .planning-wrapper .grid-3,
-    .planning-wrapper .clil-selector-grid,
-    .filters-container {
-        grid-template-columns: 1fr;
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* Selectores de Grado (Scroll horizontal si son muchos) */
-    .planning-wrapper .grade-selector {
-        justify-content: center;
-        overflow-x: auto;
-        padding-bottom: 10px;
-    }
-
-    /* Tarjetas Individuales */
-    .planning-wrapper .individual-grade-card {
-        padding: 25px 15px;
-        margin-top: 20px;
-    }
-
-    .planning-wrapper .card-tag {
-        left: 50%;
-        transform: translateX(-50%); /* Centrado de etiqueta en móvil */
-    }
-
-    /* Tablas Responsivas (Scroll lateral) */
-    .planning-wrapper .table-card {
-        overflow-x: auto;
-    }
-
-    .planning-wrapper .modern-table {
-        min-width: 600px; /* Evita que la tabla se colapse demasiado */
-    }
-
-    /* Modales */
-    .scaffolding-modal {
-        width: 95%;
-        max-height: 95vh;
-    }
-
-    .modal-body {
-        padding: 20px;
-    }
-
-    .modal-footer {
-        justify-content: center;
-    }
+    .planning-wrapper .page-header { flex-direction: column; gap: 15px; text-align: center; }
+    .planning-wrapper .header-actions { width: 100%; justify-content: center; flex-wrap: wrap; }
+    .planning-wrapper .grid-2, .planning-wrapper .grid-3, .planning-wrapper .clil-selector-grid, .filters-container { grid-template-columns: 1fr; display: flex; flex-direction: column; }
+    .planning-wrapper .individual-grade-card { padding: 25px 15px; margin-top: 20px; }
+    .planning-wrapper .table-card { overflow-x: auto; }
+    .planning-wrapper .modern-table { min-width: 700px; }
+    .actions-td { width: 120px; }
 }
 
-/* =========================================
-   RESPONSIVE: CELULARES PEQUEÑOS (Hasta 480px)
-   ========================================= */
 @media (max-width: 480px) {
-    .planning-wrapper .title-section h1 {
-        font-size: 1.3rem;
-    }
-
-    .planning-wrapper .btn-main, 
-    .planning-wrapper .btn-sync {
-        width: 100%; /* Botones de acción ocupan todo el ancho */
-        text-align: center;
-    }
-
-    .planning-wrapper .clil-scroll {
-        height: 200px; /* Reducción de altura para scroll interno */
-    }
-
-    .planning-wrapper .btn-save-all {
-        padding: 15px;
-        font-size: 1rem;
-    }
-
-    .actions-cell {
-        flex-direction: column; /* Botones de acción de tabla uno sobre otro */
-    }
+    .planning-wrapper .title-section h1 { font-size: 1.3rem; }
+    .planning-wrapper .btn-main, .planning-wrapper .btn-sync { width: 100%; text-align: center; }
+    .planning-wrapper .btn-save-all { padding: 15px; font-size: 1rem; }
 }
