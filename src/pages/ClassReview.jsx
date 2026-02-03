@@ -125,7 +125,6 @@ export const ClassReview = ({ userData, teacherList = [] }) => {
             for (const item of syncQueue) {
                 const { isLocal, syncAction, ...dataToSend } = item;
                 
-                // MAPEO PARA COMPATIBILIDAD EXACTA CON EXCEL
                 const payloadData = {
                     ...dataToSend,
                     "Discipline & Flow": dataToSend.Discipline_Flow,
@@ -219,9 +218,15 @@ export const ClassReview = ({ userData, teacherList = [] }) => {
                                 <td><strong>{rev.Teacher || rev.Teacher_Name}</strong></td>
                                 <td>{rev.Grade} - {rev.Subject}</td>
                                 <td style={{ fontWeight: 'bold' }}>{Math.round(rev.Score || rev.Global_Score || 0)}%</td>
-                                <td>
-                                    <button className="btn-view" onClick={() => setSelectedSummary(rev)}>👁️ View</button>
-                                    <button className="btn-view" style={{backgroundColor: '#8b5cf6', marginLeft: '5px'}} onClick={() => handleEditFeedback(rev)}>📝 Feedback</button>
+                                <td className="review-actions-td">
+                                    <div className="review-actions-container">
+                                        <button className="btn-action-view" onClick={() => setSelectedSummary(rev)}>
+                                            👁️ View
+                                        </button>
+                                        <button className="btn-action-feedback" onClick={() => handleEditFeedback(rev)}>
+                                            📝 Feedback
+                                        </button>
+                                    </div>
                                 </td>
                                 <td>{rev.isLocal ? "⏳" : "✅"}</td>
                             </tr>

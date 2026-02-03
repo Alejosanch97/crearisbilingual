@@ -431,6 +431,81 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+/* =========================================
+   ESTILOS EXCLUSIVOS PARA CLASS REVIEW
+   (No afectan a Lesson Planner)
+   ========================================= */
+
+/* Contenedor de la celda de acciones */
+.planning-wrapper .review-actions-td {
+    width: 240px; /* Espacio suficiente para los dos botones con texto */
+}
+
+.planning-wrapper .review-actions-container {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Botones con Texto (View y Feedback) */
+.planning-wrapper .btn-action-view, 
+.planning-wrapper .btn-action-feedback {
+    /* Reseteo de estilos para que no hereden tamaños de cuadrito */
+    width: auto !important; 
+    height: auto !important;
+    min-width: 90px;
+    padding: 8px 14px !important;
+    
+    /* Diseño */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap; /* Evita que el texto se rompa en dos líneas */
+}
+
+/* Colores específicos para View */
+.planning-wrapper .btn-action-view {
+    background-color: #e0f2fe !important;
+    color: #0369a1 !important;
+}
+
+.planning-wrapper .btn-action-view:hover {
+    background-color: #0080ff !important;
+    color: #ffffff !important;
+}
+
+/* Colores específicos para Feedback */
+.planning-wrapper .btn-action-feedback {
+    background-color: #f5f3ff !important;
+    color: #6d28d9 !important;
+}
+
+.planning-wrapper .btn-action-feedback:hover {
+    background-color: #8b5cf6 !important;
+    color: #ffffff !important;
+}
+
+/* Ajuste Responsivo para estos botones */
+@media (max-width: 768px) {
+    .planning-wrapper .review-actions-container {
+        flex-direction: column; /* En móvil se ponen uno sobre otro */
+        gap: 5px;
+    }
+    .planning-wrapper .btn-action-view, 
+    .planning-wrapper .btn-action-feedback {
+        width: 100% !important;
+        padding: 6px 10px !important;
+    }
+}
+
 /* --- Animations --- */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
