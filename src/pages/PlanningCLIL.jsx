@@ -55,7 +55,6 @@ export const PlanningCLIL = ({ userData }) => {
             const resp = await fetch(`${API_URL}?sheet=Lesson_Planners`);
             const data = await resp.json();
             if (Array.isArray(data)) {
-                // Filtramos por la columna "Teacher" que devuelve el backend
                 const myData = data.filter(p => {
                     const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
                     const userKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
@@ -96,6 +95,8 @@ export const PlanningCLIL = ({ userData }) => {
         setFormsData({
             [grade]: {
                 ...plan,
+                ID_Setup: plan.ID_Setup, // Mantenemos el ID original
+                rowId: plan.rowId,       // Mantenemos la fila original
                 "Thinking Skill": typeof plan["Thinking Skill"] === 'string' ? plan["Thinking Skill"].split(", ") : (plan["Thinking Skill"] || []),
                 "Language Frame": typeof plan["Language Frame"] === 'string' ? plan["Language Frame"].split(", ") : (plan["Language Frame"] || []),
                 "Start Date": formatDate(plan["Start Date"]),
@@ -140,7 +141,7 @@ export const PlanningCLIL = ({ userData }) => {
                     "Thinking Skill": [], "Language Frame": [], "Thinking Routine": "",
                     "Richmond Resources": "", "Activity Link": "", "Parent Task": "",
                     "Weekly Challenge": "", "% Status": "0%", ID_Setup: `ID-${Date.now()}-${grade}`,
-                    Teacher: String(userData.Teacher_Key || userData.User_Key || "").trim() // Coincidencia exacta con nombre de columna
+                    Teacher: String(userData.Teacher_Key || userData.User_Key || "").trim()
                 }
             }));
         }
@@ -170,16 +171,27 @@ export const PlanningCLIL = ({ userData }) => {
 
     const handleSaveToQueue = (e) => {
         e.preventDefault();
-        const formatted = Object.values(formsData).map(entry => ({
+        const formattedEntries = Object.values(formsData).map(entry => ({
             ...JSON.parse(JSON.stringify(entry)),
             "Thinking Skill": Array.isArray(entry["Thinking Skill"]) ? entry["Thinking Skill"].join(", ") : entry["Thinking Skill"],
             "Language Frame": Array.isArray(entry["Language Frame"]) ? entry["Language Frame"].join(", ") : entry["Language Frame"],
             isLocal: true
         }));
         
-        const newIds = formatted.map(f => f.ID_Setup);
-        setPlannings(prev => [...formatted, ...prev.filter(p => !newIds.includes(p.ID_Setup))]);
-        setSyncQueue(prev => [...prev, ...formatted]);
+        const newIds = formattedEntries.map(f => f.ID_Setup);
+        
+        // Actualizamos plannings reemplazando los que tengan el mismo ID_Setup
+        setPlannings(prev => {
+            const filtered = prev.filter(p => !newIds.includes(p.ID_Setup));
+            return [...formattedEntries, ...filtered];
+        });
+
+        // Actualizamos syncQueue evitando duplicados de ID_Setup
+        setSyncQueue(prev => {
+            const filtered = prev.filter(q => !newIds.includes(q.ID_Setup));
+            return [...filtered, ...formattedEntries];
+        });
+
         handleCancelForm();
     };
 
@@ -188,9 +200,15 @@ export const PlanningCLIL = ({ userData }) => {
         try {
             for (const item of syncQueue) {
                 const { isLocal, rowId, ...dataToSend } = item;
+                // Usamos 'create' porque el AppScript ahora es inteligente y detecta si el ID ya existe para hacer update
                 await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'create', sheet: "Lesson_Planners", data: dataToSend })
+                    body: JSON.stringify({ 
+                        action: 'create', 
+                        sheet: "Lesson_Planners", 
+                        data: dataToSend,
+                        rowId: rowId // Enviamos el rowId por si acaso, aunque el backend buscará por ID_Setup
+                    })
                 });
             }
             setSyncQueue([]); 
