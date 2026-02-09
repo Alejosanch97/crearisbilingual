@@ -173,13 +173,35 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         setIsLoading(false);
     };
 
+    // 1. CORRECCIÓN DE LÓGICA DE PROGRESO (Semáforo)
     const calculateProgress = (activity) => {
         const details = excelData.Activity_Details_Form || [];
+        // Buscamos el detalle que coincida con el ID de la actividad
         const detail = details.find(d => String(d.ID_Activity) === String(activity.ID_Activity));
+
         if (!detail) return 0;
-        const relevantFields = ['Academic_Objective', 'Target_Vocabulary', 'Language_Structures', 'Speaking_Challenge', 'Interactive_Stages', 'Resource_Links', 'Evaluation_Method', 'Evidence_Preview'];
-        const completedFields = relevantFields.filter(field => detail[field] && detail[field].toString().trim() !== "");
-        return Math.min(Math.round((completedFields.length / relevantFields.length) * 100), 100);
+
+        // Lista de campos exactos de tu tabla Activity_Details_Form
+        const relevantFields = [
+            'Academic_Objective',
+            'Target_Vocabulary',
+            'Language_Structures',
+            'Speaking_Challenge',
+            'Interactive_Stages',
+            'Resource_Links',
+            'Evaluation_Method',
+            'Evidence_Preview'
+        ];
+
+        // Contamos cuántos de estos campos tienen contenido real
+        const completedFields = relevantFields.filter(field => {
+            const value = detail[field];
+            return value && value.toString().trim() !== "" && value.toString().toLowerCase() !== "null";
+        });
+
+        // Calculamos el porcentaje
+        const progress = Math.round((completedFields.length / relevantFields.length) * 100);
+        return Math.min(progress, 100);
     };
 
     const getSemaforoLogic = (activity) => {
@@ -191,19 +213,50 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     useEffect(() => {
         if (!excelData.Teachers_Users || !userData) return;
-        const teacherName = userData.Teacher_Name || userData.name;
-        const teacherKey = userData.Teacher_Key || teacherName; 
+
+        // Identificadores del usuario (usamos el User_Key para mayor precisión)
+        const teacherName = (userData.Teacher_Name || userData.name || "").trim();
+        const teacherKey = (userData.User_Key || userData.Teacher_Key || teacherName).trim();
+
         setAllTeachers(excelData.Teachers_Users);
-        const allMyChallenges = (excelData.Weekly_Challenges || []).filter(c => String(c.Teacher_Key) === String(teacherKey) || String(c.Teacher_Key) === String(teacherName));
+
+        // Filtro Weekly Challenges (Usa Teacher_Key)
+        const allMyChallenges = (excelData.Weekly_Challenges || []).filter(c =>
+            String(c.Teacher_Key).trim() === teacherKey || String(c.Teacher_Key).trim() === teacherName
+        );
         setUserChallenges(allMyChallenges);
-        const myActs = (excelData.Activities_Calendar || []).filter(a => String(a.Responsable_ID || a.Responsable || "").trim().toUpperCase() === String(teacherName).trim().toUpperCase());
+
+        // Filtro Actividades
+        const myActs = (excelData.Activities_Calendar || []).filter(a =>
+            String(a.Responsable_ID || a.Responsable || "").trim().toUpperCase() === teacherName.toUpperCase()
+        );
         setUserActivities(myActs);
-        let myPlans = (excelData.Lesson_Planners || []).filter(p => p.Teacher && String(p.Teacher).trim().toUpperCase() === String(teacherName).trim().toUpperCase());
-        if (myPlans.length === 0) myPlans = excelData.Lesson_Planners || [];
+
+        // --- CORRECCIÓN VOCABULARY BIG 5 ---
+        // Filtramos SOLO por la columna "Teacher" comparando con tu identificador
+        // Eliminamos el "if (myPlans.length === 0)" para que no se filtre a otros profesores
+        const myPlans = (excelData.Lesson_Planners || []).filter(p => {
+            const planTeacher = String(p.Teacher || "").trim();
+            return planTeacher === teacherKey || planTeacher === teacherName;
+        });
+
         setVocabularyData(myPlans);
-        const allWords = myPlans.map(p => p["Vocabulary Big 5"] || p.Vocabulary_Big_5).filter(Boolean).join(',').split(',').map(v => v.trim()).filter(v => v !== "");
+
+        // Generar nube de vocabulario solo con TUS datos
+        const allWords = myPlans
+            .map(p => p["Vocabulary Big 5"] || p.Vocabulary_Big_5)
+            .filter(Boolean)
+            .join(',')
+            .split(',')
+            .map(v => v.trim())
+            .filter(v => v !== "");
+
         setSimpleVocabList([...new Set(allWords)]);
-        const myObs = (excelData.Class_Observations || []).filter(o => String(o.Teacher_Name || o.Teacher || "").trim().toUpperCase() === String(teacherName).trim().toUpperCase());
+
+        // Filtro Observaciones
+        const myObs = (excelData.Class_Observations || []).filter(o =>
+            String(o.Teacher_Name || o.Teacher || "").trim().toUpperCase() === teacherName.toUpperCase()
+        );
         if (myObs.length > 0) {
             const total = myObs.reduce((sum, obs) => sum + (Number(obs.Calculated_Score || obs.Score || 0)), 0);
             setAverageScore((total / myObs.length).toFixed(1));
@@ -486,7 +539,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                     <button className={activeTab === "planning" ? "active" : ""} onClick={() => { setActiveTab("planning"); setIsMobileMenuOpen(false); }}>📝 Planning</button>
                     <button className={activeTab === "activities" ? "active" : ""} onClick={() => { setActiveTab("activities"); setIsMobileMenuOpen(false); }}>📅 Activities</button>
                     {userData.ROL === "Admin" && (
-                        <button className={activeTab === "revision" ? "active" : ""} onClick={() => { setActiveTab("revision"); setIsMobileMenuOpen(false); }}>🔍 Revision</button>
+                        <button className={activeTab === "revision" ? "active" : ""} onClick={() => { setActiveTab("revision"); setIsMobileMenuOpen(false); }}>🔍 Review</button>
                     )}
                     <button className="logout-btn-side" onClick={() => { handleLogoutAction(); setIsMobileMenuOpen(false); }} style={{marginTop: 'auto'}}>🚪 Logout</button>
                 </nav>

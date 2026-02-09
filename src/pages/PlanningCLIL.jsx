@@ -55,7 +55,12 @@ export const PlanningCLIL = ({ userData }) => {
             const resp = await fetch(`${API_URL}?sheet=Lesson_Planners`);
             const data = await resp.json();
             if (Array.isArray(data)) {
-                const myData = data.filter(p => p.Teacher_Key === userData.Teacher_Key);
+                // Filtramos por la columna "Teacher" que devuelve el backend
+                const myData = data.filter(p => {
+                    const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
+                    const userKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
+                    return recordKey === userKey;
+                });
                 setPlannings(myData);
             }
         } catch (e) { console.error("Error fetching data:", e); }
@@ -135,7 +140,7 @@ export const PlanningCLIL = ({ userData }) => {
                     "Thinking Skill": [], "Language Frame": [], "Thinking Routine": "",
                     "Richmond Resources": "", "Activity Link": "", "Parent Task": "",
                     "Weekly Challenge": "", "% Status": "0%", ID_Setup: `ID-${Date.now()}-${grade}`,
-                    Teacher_Key: userData.Teacher_Key
+                    Teacher: String(userData.Teacher_Key || userData.User_Key || "").trim() // Coincidencia exacta con nombre de columna
                 }
             }));
         }
@@ -211,14 +216,14 @@ export const PlanningCLIL = ({ userData }) => {
     });
 
     const isFiltered = filterGrade !== "" || filterSubject !== "" || filterTerm !== "";
-    const displayedPlannings = isFiltered ? filteredPlannings : filteredPlannings.slice(0, 10);
+    const displayedPlannings = isFiltered ? filteredPlannings : filteredPlannings.slice(0, 15);
 
     return (
         <div className="planning-wrapper">
             <header className="page-header">
                 <div className="title-section">
                     <h1>CLIL Lesson Planner</h1>
-                    <p>Independent content management per grade.</p>
+                    <p>Independent content management for: <strong>{userData.Teacher_Name || userData.Teacher_Key || userData.User_Key}</strong></p>
                 </div>
                 <div className="header-actions">
                     <button className="btn-refresh" onClick={fetchData} disabled={isSyncing} title="Reload Data">
@@ -419,35 +424,43 @@ export const PlanningCLIL = ({ userData }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {displayedPlannings.map((plan, i) => (
-                            <tr key={i} className={plan.isLocal ? "row-local" : ""}>
-                                <td>
-                                    <span className="grade-tag">{plan.Grade}</span>
-                                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>{plan.Term}</div>
-                                </td>
-                                <td>
-                                    <strong>{plan.Subject}</strong>
-                                    <div style={{ fontSize: '0.75rem' }}>Sess: {plan.Session_Number}</div>
-                                </td>
-                                <td>
-                                    <strong>{plan.Topic}</strong>
-                                    <div style={{ fontSize: '0.75rem', color: '#334155' }}>{plan.Objective?.substring(0, 50)}...</div>
-                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px' }}>
-                                        📅 {formatDate(plan["Start Date"])} to {formatDate(plan["Finish Date"])}
-                                    </div>
-                                </td>
-                                <td className="actions-td">
-                                    <div className="actions-cell">
-                                        <button className="btn-view" onClick={() => setSelectedSummary(plan)} title="View">👁️</button>
-                                        <button className="btn-edit" onClick={() => handleEdit(plan)} title="Edit">✏️</button>
-                                        <button className="btn-del" onClick={() => handleDelete(plan)} title="Delete">🗑️</button>
-                                    </div>
-                                </td>
-                                <td style={{ textAlign: 'center' }}>
-                                    {plan.isLocal ? "⏳" : "✅"}
+                        {displayedPlannings.length > 0 ? (
+                            displayedPlannings.map((plan, i) => (
+                                <tr key={i} className={plan.isLocal ? "row-local" : ""}>
+                                    <td>
+                                        <span className="grade-tag">{plan.Grade}</span>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px' }}>{plan.Term}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{plan.Subject}</strong>
+                                        <div style={{ fontSize: '0.75rem' }}>Sess: {plan.Session_Number}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{plan.Topic}</strong>
+                                        <div style={{ fontSize: '0.75rem', color: '#334155' }}>{plan.Objective?.substring(0, 50)}...</div>
+                                        <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px' }}>
+                                            📅 {formatDate(plan["Start Date"])} to {formatDate(plan["Finish Date"])}
+                                        </div>
+                                    </td>
+                                    <td className="actions-td">
+                                        <div className="actions-cell">
+                                            <button className="btn-view" onClick={() => setSelectedSummary(plan)} title="View">👁️</button>
+                                            <button className="btn-edit" onClick={() => handleEdit(plan)} title="Edit">✏️</button>
+                                            <button className="btn-del" onClick={() => handleDelete(plan)} title="Delete">🗑️</button>
+                                        </div>
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {plan.isLocal ? "⏳" : "✅"}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                    {isSyncing ? "Syncing data..." : "No plannings found for your account."}
                                 </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
             </div>
