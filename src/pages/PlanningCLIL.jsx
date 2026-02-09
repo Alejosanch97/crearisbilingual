@@ -40,9 +40,16 @@ export const PlanningCLIL = ({ userData }) => {
     const [filterSubject, setFilterSubject] = useState("");
     const [filterTerm, setFilterTerm] = useState("");
 
+    // Determinar si es Admin usando la columna "ROL"
+    const isAdmin = String(userData.ROL).trim().toLowerCase() === 'admin';
+
     const userGrades = userData.Assigned_Grade?.split(',').map(g => g.trim()) || [];
     const userSubjects = userData.Assigned_Subject?.split(',').map(s => s.trim()) || [];
     const terms = ["First Term", "Second Term", "Third Term", "Fourth Term"];
+
+    // Opciones para filtros (Si es admin, extraemos opciones únicas de todos los plannings)
+    const gradeOptions = isAdmin ? [...new Set(plannings.map(p => p.Grade))] : userGrades;
+    const subjectOptions = isAdmin ? [...new Set(plannings.map(p => p.Subject))] : userSubjects;
 
     const [selectedGrades, setSelectedGrades] = useState([]);
     const [formsData, setFormsData] = useState({});
@@ -55,12 +62,18 @@ export const PlanningCLIL = ({ userData }) => {
             const resp = await fetch(`${API_URL}?sheet=Lesson_Planners`);
             const data = await resp.json();
             if (Array.isArray(data)) {
-                const myData = data.filter(p => {
-                    const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
-                    const userKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
-                    return recordKey === userKey;
-                });
-                setPlannings(myData);
+                if (isAdmin) {
+                    // El Admin ve absolutamente todo
+                    setPlannings(data);
+                } else {
+                    // El Teacher solo ve lo suyo filtrando por su ID
+                    const myData = data.filter(p => {
+                        const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
+                        const userKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
+                        return recordKey === userKey;
+                    });
+                    setPlannings(myData);
+                }
             }
         } catch (e) { console.error("Error fetching data:", e); }
         setIsSyncing(false);
@@ -95,8 +108,8 @@ export const PlanningCLIL = ({ userData }) => {
         setFormsData({
             [grade]: {
                 ...plan,
-                ID_Setup: plan.ID_Setup, // Mantenemos el ID original
-                rowId: plan.rowId,       // Mantenemos la fila original
+                ID_Setup: plan.ID_Setup,
+                rowId: plan.rowId,
                 "Thinking Skill": typeof plan["Thinking Skill"] === 'string' ? plan["Thinking Skill"].split(", ") : (plan["Thinking Skill"] || []),
                 "Language Frame": typeof plan["Language Frame"] === 'string' ? plan["Language Frame"].split(", ") : (plan["Language Frame"] || []),
                 "Start Date": formatDate(plan["Start Date"]),
@@ -179,19 +192,14 @@ export const PlanningCLIL = ({ userData }) => {
         }));
         
         const newIds = formattedEntries.map(f => f.ID_Setup);
-        
-        // Actualizamos plannings reemplazando los que tengan el mismo ID_Setup
         setPlannings(prev => {
             const filtered = prev.filter(p => !newIds.includes(p.ID_Setup));
             return [...formattedEntries, ...filtered];
         });
-
-        // Actualizamos syncQueue evitando duplicados de ID_Setup
         setSyncQueue(prev => {
             const filtered = prev.filter(q => !newIds.includes(q.ID_Setup));
             return [...filtered, ...formattedEntries];
         });
-
         handleCancelForm();
     };
 
@@ -200,14 +208,13 @@ export const PlanningCLIL = ({ userData }) => {
         try {
             for (const item of syncQueue) {
                 const { isLocal, rowId, ...dataToSend } = item;
-                // Usamos 'create' porque el AppScript ahora es inteligente y detecta si el ID ya existe para hacer update
                 await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ 
                         action: 'create', 
                         sheet: "Lesson_Planners", 
                         data: dataToSend,
-                        rowId: rowId // Enviamos el rowId por si acaso, aunque el backend buscará por ID_Setup
+                        rowId: rowId 
                     })
                 });
             }
@@ -241,7 +248,9 @@ export const PlanningCLIL = ({ userData }) => {
             <header className="page-header">
                 <div className="title-section">
                     <h1>CLIL Lesson Planner</h1>
-                    <p>Independent content management for: <strong>{userData.Teacher_Name || userData.Teacher_Key || userData.User_Key}</strong></p>
+                    <p>Logged in as: <strong>{userData.Teacher_Name || userData.User_Key}</strong> 
+                       <span className={`role-badge ${userData.ROL}`}>{userData.ROL}</span>
+                    </p>
                 </div>
                 <div className="header-actions">
                     <button className="btn-refresh" onClick={fetchData} disabled={isSyncing} title="Reload Data">
@@ -263,14 +272,14 @@ export const PlanningCLIL = ({ userData }) => {
                     <label>Grade:</label>
                     <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)}>
                         <option value="">All Grades</option>
-                        {userGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                        {gradeOptions.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                 </div>
                 <div className="filter-group">
                     <label>Subject:</label>
                     <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
                         <option value="">All Subjects</option>
-                        {userSubjects.map(s => <option key={s}>{s}</option>)}
+                        {subjectOptions.map(s => <option key={s}>{s}</option>)}
                     </select>
                 </div>
                 <div className="filter-group">
@@ -457,6 +466,10 @@ export const PlanningCLIL = ({ userData }) => {
                                         <strong>{plan.Topic}</strong>
                                         <div style={{ fontSize: '0.75rem', color: '#334155' }}>{plan.Objective?.substring(0, 50)}...</div>
                                         <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px' }}>
+                                            {/* Mostrar autor si es Admin */}
+                                            {isAdmin && (
+                                                <div style={{color: '#2563eb', fontWeight: 'bold', marginBottom: '2px'}}>👤 {plan.Teacher}</div>
+                                            )}
                                             📅 {formatDate(plan["Start Date"])} to {formatDate(plan["Finish Date"])}
                                         </div>
                                     </td>
@@ -475,7 +488,7 @@ export const PlanningCLIL = ({ userData }) => {
                         ) : (
                             <tr>
                                 <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
-                                    {isSyncing ? "Syncing data..." : "No plannings found for your account."}
+                                    {isSyncing ? "Syncing data..." : "No plannings found."}
                                 </td>
                             </tr>
                         )}
@@ -492,6 +505,7 @@ export const PlanningCLIL = ({ userData }) => {
                         </div>
                         <div className="modal-body">
                             <div className="snapshot-info">
+                                <p><strong>Teacher:</strong> {selectedSummary.Teacher}</p>
                                 <p><strong>Subject:</strong> {selectedSummary.Subject} ({selectedSummary.Term})</p>
                                 <p><strong>Key Vocabulary:</strong> {selectedSummary["Vocabulary Big 5"]}</p>
                                 <p><strong>Language Frames:</strong> {selectedSummary["Language Frame"]}</p>
