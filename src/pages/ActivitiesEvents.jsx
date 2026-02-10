@@ -9,7 +9,7 @@ export const ActivitiesEvents = ({ userData }) => {
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [showDetailForm, setShowDetailForm] = useState(false);
-    const [summaryData, setSummaryData] = useState(null); // Nuevo estado para datos de resumen
+    const [summaryData, setSummaryData] = useState(null); 
 
     const isAdmin = userData.ROL?.toUpperCase() === 'ADMIN';
 
@@ -50,10 +50,37 @@ export const ActivitiesEvents = ({ userData }) => {
         } catch (e) { console.error(e); }
     };
 
-    // Lógica unificada para extraer datos por ID_Activity (La que pediste mantener)
     const getExistingDetail = (activityId) => {
         const existingEntries = allDetails.filter(d => String(d.ID_Activity) === String(activityId));
         return existingEntries.length > 0 ? existingEntries[existingEntries.length - 1] : null;
+    };
+
+    // FUNCIÓN PARA CONVERTIR TEXTO CON LINKS EN ELEMENTOS CLICKABLES
+    const renderTextWithLinks = (text) => {
+        if (!text) return "Not filled";
+        
+        // Expresión regular para detectar URLs que empiecen con http o https o www.
+        const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+        
+        const parts = String(text).split(urlRegex);
+        
+        return parts.map((part, index) => {
+            if (part.match(urlRegex)) {
+                const href = part.startsWith('www.') ? `https://${part}` : part;
+                return (
+                    <a 
+                        key={index} 
+                        href={href} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}
+                    >
+                        {part}
+                    </a>
+                );
+            }
+            return part;
+        });
     };
 
     const handleOpenForm = (activity) => {
@@ -86,13 +113,12 @@ export const ActivitiesEvents = ({ userData }) => {
         setShowDetailForm(true);
     };
 
-    // CORRECCIÓN: Nueva función para el ojo que usa la misma lógica de extracción
     const handleOpenSummary = (activity) => {
         const lastEntry = getExistingDetail(activity.ID_Activity);
         if (lastEntry) {
             setSummaryData({
                 ...lastEntry,
-                Event_Name: activity.Event_Name // Pasamos el nombre para el título del modal
+                Event_Name: activity.Event_Name 
             });
         }
     };
@@ -227,7 +253,6 @@ export const ActivitiesEvents = ({ userData }) => {
                             <button className="close-x" onClick={() => setShowDetailForm(false)}>×</button>
                         </div>
                         <form onSubmit={handleSaveDetails} className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                            {/* Campos del formulario originales (Se mantienen intactos) */}
                             <div className="input-group" style={{gridColumn: 'span 2'}}>
                                 <label>Academic Objective</label>
                                 <textarea value={detailData.Academic_Objective} required onChange={(e) => setDetailData({...detailData, Academic_Objective: e.target.value})} />
@@ -297,7 +322,7 @@ export const ActivitiesEvents = ({ userData }) => {
                 </div>
             )}
 
-            {/* MODAL DE RESUMEN (POP UP OJO) - CORREGIDO */}
+            {/* MODAL DE RESUMEN (POP UP OJO) - CORREGIDO PARA LINKS */}
             {summaryData && (
                 <div className="modal-overlay" onClick={() => setSummaryData(null)}>
                     <div className="scaffolding-modal" style={{maxWidth: '600px'}} onClick={e => e.stopPropagation()}>
@@ -307,21 +332,21 @@ export const ActivitiesEvents = ({ userData }) => {
                         </div>
                         <div className="modal-body">
                             <div className="snapshot-info" style={{background: 'white', border: 'none', padding: '0', display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                                <p><strong>Academic Objective:</strong> {summaryData.Academic_Objective || "Not filled"}</p>
-                                <p><strong>Target Vocabulary:</strong> {summaryData.Target_Vocabulary || "Not filled"}</p>
-                                <p><strong>Language Structures:</strong> {summaryData.Language_Structures || "Not filled"}</p>
-                                <p><strong>Interactive Stages:</strong> {summaryData.Interactive_Stages || "Not filled"}</p>
-                                <p><strong>Speaking Challenge:</strong> {summaryData.Speaking_Challenge || "Not filled"}</p>
+                                <p><strong>Academic Objective:</strong> {renderTextWithLinks(summaryData.Academic_Objective)}</p>
+                                <p><strong>Target Vocabulary:</strong> {renderTextWithLinks(summaryData.Target_Vocabulary)}</p>
+                                <p><strong>Language Structures:</strong> {renderTextWithLinks(summaryData.Language_Structures)}</p>
+                                <p><strong>Interactive Stages:</strong> {renderTextWithLinks(summaryData.Interactive_Stages)}</p>
+                                <p><strong>Speaking Challenge:</strong> {renderTextWithLinks(summaryData.Speaking_Challenge)}</p>
                                 <p><strong>Evaluation Method:</strong> {summaryData.Evaluation_Method || "Not filled"}</p>
-                                <p><strong>Evidence Preview:</strong> {summaryData.Evidence_Preview || "Not filled"}</p>
-                                <p><strong>Resource Links:</strong> {summaryData.Resource_Links || "No links"}</p>
+                                <p><strong>Evidence Preview:</strong> {renderTextWithLinks(summaryData.Evidence_Preview)}</p>
+                                <p><strong>Resource Links:</strong> {renderTextWithLinks(summaryData.Resource_Links)}</p>
                                 <p><strong>Budget Status:</strong> {summaryData.Budget_Status}</p>
                                 
                                 {(summaryData.Score || summaryData.Feedback) && (
                                     <div style={{marginTop: '15px', padding: '15px', background: '#f8fafc', borderRadius: '8px', borderLeft: '5px solid #2563eb'}}>
                                         <h4 style={{margin: '0 0 10px 0', color: '#2563eb'}}>Admin Evaluation</h4>
                                         {summaryData.Score && <p><strong>Score:</strong> {summaryData.Score}/100</p>}
-                                        {summaryData.Feedback && <p><strong>Feedback:</strong> {summaryData.Feedback}</p>}
+                                        {summaryData.Feedback && <p><strong>Feedback:</strong> {renderTextWithLinks(summaryData.Feedback)}</p>}
                                     </div>
                                 )}
                             </div>
