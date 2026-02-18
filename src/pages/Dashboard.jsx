@@ -469,6 +469,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                                 <a href="https://taupe-sprinkles-8a613b.netlify.app/" target="_blank" rel="noreferrer" className="tool-box">📊 My DOFA</a>
                                 <a href="https://playful-moxie-a7b0d0.netlify.app/" target="_blank" rel="noreferrer" className="tool-box">📈 Proficiency</a>
                                 <a href="https://docs.google.com/document/d/1gg2fdgI7m43YX3uhzhTRzu1ObnKTYJsS/edit" target="_blank" rel="noreferrer" className="tool-box">📄 Actas</a>
+                                <a href="https://docs.google.com/document/d/1s7epMFvfhjV_3-_fGXapZ03o8iCtHJct/edit?usp=sharing&ouid=116456846522794306523&rtpof=true&sd=true" target="_blank" rel="noreferrer" className="tool-box">📄 Area plan English and Clil</a>
                             </div>
                         </div>
 
