@@ -422,7 +422,7 @@ export const PlanningCLIL = ({ userData }) => {
                                 </div>
 
                                 <div className="grid-2">
-                                    <textarea placeholder="The Hook (Activity Description)" value={formsData[grade]?.["The Hook"] || ""} onChange={(e) => handleInputChange(grade, "The Hook", e.target.value)} />
+                                    <textarea placeholder="Class Description(Include the Hook)" value={formsData[grade]?.["The Hook"] || ""} onChange={(e) => handleInputChange(grade, "The Hook", e.target.value)} />
                                     <div className="grid-vertical">
                                         <input type="text" placeholder="Activity Links (comma separated)" value={formsData[grade]?.["Activity Link"] || ""} onChange={(e) => handleInputChange(grade, "Activity Link", e.target.value)} />
                                         <input type="text" placeholder="Homework / Parent Task" value={formsData[grade]?.["Parent Task"] || ""} onChange={(e) => handleInputChange(grade, "Parent Task", e.target.value)} />
