@@ -1,296 +1,729 @@
-:root {
-    --primary-color: #02308b; /* Magenta de Dory */
-    --primary-hover: #c92d94;
-    --bg-light: #f8fafc;
-    --text-dark: #1e293b;
-    --text-gray: #64748b;
-    --white: #ffffff;
+/* ============================================================
+   ORBIT HORIZON · Theme Deep Space Glassmorphism
+   Reemplaza TODO el contenido de Styles/home.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* =========================================
-   ESTRUCTURA DIVIDIDA (50/50)
-   ========================================= */
-.login-container {
-    display: flex;
-    height: 100vh;
-    width: 100%;
-    margin: 0;
-    overflow: hidden;
+.lg-page {
+  --orbit-cyan: #38bdf8;
+  --orbit-purple: #818cf8;
+  --orbit-pink: #f472b6;
+  --orbit-glow: rgba(56, 189, 248, 0.15);
+  
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(to bottom, #0b0b2b, #1b2735 70%, #090a0f);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: #f8fafc;
 }
 
-/* Lado Izquierdo: Información y Color */
-.login-info-side {
-    flex: 1;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 60px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    transition: all 0.5s ease;
+/* ============================================================
+   ANIMACIÓN DE ESTRELLAS Y COMETAS
+   ============================================================ */
+.stars {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  background: white;
+  box-shadow: 2vw 5vh 2px white, 10vw 8vh 2px white, 15vw 15vh 1px white,
+    22vw 22vh 1px white, 28vw 12vh 2px white, 32vw 32vh 1px white,
+    38vw 18vh 2px white, 42vw 35vh 1px white, 48vw 25vh 2px white,
+    53vw 42vh 1px white, 58vw 15vh 2px white, 63vw 38vh 1px white,
+    68vw 28vh 2px white, 73vw 45vh 1px white, 78vw 32vh 2px white,
+    83vw 48vh 1px white, 88vw 20vh 2px white, 93vw 52vh 1px white,
+    98vw 35vh 2px white, 5vw 60vh 1px white, 12vw 65vh 2px white,
+    18vw 72vh 1px white, 25vw 78vh 2px white, 30vw 85vh 1px white,
+    35vw 68vh 2px white, 40vw 82vh 1px white, 45vw 92vh 2px white,
+    50vw 75vh 1px white, 55vw 88vh 2px white, 60vw 95vh 1px white,
+    65vw 72vh 2px white, 70vw 85vh 1px white, 75vw 78vh 2px white,
+    80vw 92vh 1px white, 85vw 82vh 2px white, 90vw 88vh 1px white,
+    95vw 75vh 2px white;
+  animation: twinkle 8s infinite linear;
 }
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 50px;
+.stars::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  background: white;
+  box-shadow: 8vw 12vh 2px white, 16vw 18vh 1px white, 24vw 25vh 2px white,
+    33vw 15vh 1px white, 41vw 28vh 2px white, 49vw 35vh 1px white,
+    57vw 22vh 2px white, 65vw 42vh 1px white, 73vw 28vh 2px white,
+    81vw 48vh 1px white, 89vw 32vh 2px white, 97vw 45vh 1px white,
+    3vw 68vh 2px white, 11vw 75vh 1px white, 19vw 82vh 2px white,
+    27vw 88vh 1px white, 35vw 72vh 2px white, 43vw 85vh 1px white,
+    51vw 92vh 2px white, 59vw 78vh 1px white;
+  animation: twinkle 6s infinite linear reverse;
 }
 
-.logo-icon {
-    background: white;
-    color: var(--primary-color);
-    border-radius: 8px;
-    padding: 2px 10px;
-    font-size: 1.2rem;
+.shooting-star {
+  position: absolute;
+  width: 100px;
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, transparent);
+  animation: shoot 3.5s infinite ease-in;
+  pointer-events: none;
+}
+.shooting-star:nth-child(1) { top: 15%; left: -100px; animation-delay: 0s; }
+.shooting-star:nth-child(2) { top: 35%; left: -100px; animation-delay: 1.2s; }
+.shooting-star:nth-child(3) { top: 55%; left: -100px; animation-delay: 2.4s; }
+.shooting-star:nth-child(4) { top: 75%; left: -100px; animation-delay: 0.8s; }
+.shooting-star:nth-child(5) { top: 25%; left: -100px; animation-delay: 3.1s; }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.3; }
 }
 
-.info-content h1 {
-    font-size: 4.5rem;
-    margin: 0 0 10px 0;
-    font-weight: 800;
+@keyframes shoot {
+  0% { transform: translateX(0) translateY(0) rotate(25deg); opacity: 1; }
+  100% { transform: translateX(130vw) translateY(60vh) rotate(25deg); opacity: 0; }
 }
 
-.subtitle {
-    font-size: 1.8rem;
-    margin-bottom: 25px;
-    font-weight: 400;
+/* Luces difusas espaciales de ambiente */
+.lg-space-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 1;
+}
+.lg-space-glow.glow-1 {
+  width: 500px; height: 500px;
+  top: -100px; left: -100px;
+  background: rgba(56, 189, 248, 0.15);
+}
+.lg-space-glow.glow-2 {
+  width: 550px; height: 550px;
+  bottom: -150px; right: -100px;
+  background: rgba(129, 140, 248, 0.15);
 }
 
-.description {
-    opacity: 0.9;
-    max-width: 450px;
-    line-height: 1.6;
-    font-size: 1.1rem;
+/* ============================================================
+   ESTRUCTURA Y MAQUETACIÓN
+   ============================================================ */
+.lg-shell {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 50px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 30px;
+  align-items: center;
 }
 
-/* Lado Derecho: Formulario */
-.login-form-side {
-    flex: 1;
-    background-color: var(--bg-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+@media (max-width: 960px) {
+  .lg-shell { grid-template-columns: 1fr; gap: 40px; padding: 30px 20px; }
 }
 
-/* Contenedor del Logo */
-.logo-icon {
-    width: 100px;          /* Ajusta el tamaño según prefieras */
-    height: 100px;
-    border-radius: 50%;   /* Lo hace redondo */
-    overflow: hidden;     /* Recorta la imagen sobrante */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: white;    /* Fondo blanco por si la imagen tarda en cargar */
-    border: 2px solid rgba(255, 255, 255, 0.3); /* Un borde sutil decorativo */
-    flex-shrink: 0;       /* Evita que se aplaste si hay mucho texto */
+/* ============================================================
+   SECCIÓN IZQUIERDA (HERO & CONTENIDO)
+   ============================================================ */
+.lg-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  animation: lgFadeUp 0.8s ease-out;
 }
 
-/* Imagen dentro del contenedor */
-.logo-icon img {
-    width: 100%;          /* Ocupa todo el ancho del círculo */
-    height: 100%;         /* Ocupa todo el alto del círculo */
-    object-fit: cover;    /* Mantiene la proporción sin estirarse */
-    display: block;
+/* LOGO Y MARCA */
+.lg-brand { display: flex; align-items: center; gap: 16px; }
+.lg-logo {
+  width: 54px; height: 54px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+}
+.lg-logo img { width: 100%; height: 100%; object-fit: cover; }
+.lg-brand-text strong {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+.lg-brand-text span {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
-/* Ajuste adicional a la clase 'brand' para alinear el logo con el texto */
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 15px;            /* Espacio entre el logo y el nombre 'Crear School' */
-    margin-bottom: 40px;  /* Espacio inferior */
+/* HERO TITLE */
+.lg-hero { display: flex; flex-direction: column; gap: 18px; }
+
+.lg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--orbit-cyan);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  backdrop-filter: blur(10px);
+}
+.lg-badge-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--orbit-cyan);
+  box-shadow: 0 0 10px var(--orbit-cyan);
 }
 
-/* =========================================
-   TARJETA DE LOGIN
-   ========================================= */
-.login-card {
-    background: var(--white);
-    padding: 50px 40px;
-    border-radius: 28px;
-    width: 100%;
-    max-width: 420px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
-    text-align: center;
+.lg-title {
+  font-size: clamp(2.8rem, 5.5vw, 4.2rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  display: flex;
+  flex-direction: column;
+}
+.lg-title-line.accent {
+  background: linear-gradient(135deg, var(--orbit-cyan), var(--orbit-purple), var(--orbit-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.login-card h2 {
-    font-size: 2rem;
-    color: var(--text-dark);
-    margin-bottom: 30px;
-    font-weight: 700;
+/* FRASES ROTATIVAS */
+.lg-tagline {
+  position: relative;
+  height: 28px;
+}
+.lg-tagline p {
+  position: absolute;
+  margin: 0;
+  font-size: 1.05rem;
+  color: #cbd5e1;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.5s ease;
+}
+.lg-tagline p.on { opacity: 1; transform: translateY(0); }
+
+/* TARJETAS DE CARACTERÍSTICAS (GLASS EFFECT) */
+.lg-features { display: flex; flex-direction: column; gap: 12px; }
+.lg-feature {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+.lg-feature:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateX(6px);
+}
+.lg-feature-icon {
+  width: 38px; height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.2));
+  color: var(--orbit-cyan);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-size: 1rem;
+}
+.lg-feature strong { display: block; font-size: 0.9rem; color: #f1f5f9; }
+.lg-feature p { margin: 0; font-size: 0.78rem; color: #94a3b8; }
+
+/* ============================================================
+   SECCIÓN DERECHA (TARJETA FORMULARIO)
+   ============================================================ */
+.lg-panel { display: flex; justify-content: center; }
+
+.lg-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 36px;
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: lgScaleUp 0.8s ease-out;
 }
 
-/* Campos de entrada */
-.user-fixed {
-    text-align: left;
-    margin-bottom: 20px;
+.lg-card-head { margin-bottom: 26px; }
+.lg-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--orbit-cyan);
+  display: block;
+  margin-bottom: 6px;
+}
+.lg-card-head h2 { font-size: 1.6rem; font-weight: 700; color: #fff; }
+
+/* FORMULARIO E INPUTS */
+.lg-form { display: flex; flex-direction: column; gap: 20px; }
+.lg-field { display: flex; flex-direction: column; gap: 8px; }
+.lg-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.user-fixed label {
-    display: block;
-    color: var(--text-gray);
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
+.lg-input-wrap { position: relative; display: flex; align-items: center; }
+.lg-input-icon {
+  position: absolute; left: 16px;
+  color: #64748b;
+  display: grid; place-items: center;
+  transition: color 0.2s;
+}
+.lg-input-icon svg { width: 18px; height: 18px; }
+
+.lg-page .lg-input-wrap input {
+  width: 100%;
+  padding: 14px 16px 14px 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: #fff;
+  transition: all 0.25s;
+}
+.lg-page .lg-input-wrap input::placeholder { color: #475569; }
+.lg-page .lg-input-wrap input:focus {
+  outline: none;
+  border-color: var(--orbit-cyan);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+}
+.lg-input-wrap:focus-within .lg-input-icon { color: var(--orbit-cyan); }
+
+.lg-eye {
+  position: absolute; right: 12px;
+  background: transparent; border: none;
+  color: #64748b; cursor: pointer;
+  padding: 4px; display: grid; place-items: center;
+  border-radius: 8px; transition: color 0.2s;
+}
+.lg-eye svg { width: 18px; height: 18px; }
+.lg-eye:hover { color: var(--orbit-cyan); }
+
+/* MENSAJE DE ERROR */
+.lg-error {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 0.82rem; color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.lg-error svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* BOTÓN NEÓN PRO */
+.lg-submit {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 15px; border: none; border-radius: 14px;
+  font-family: inherit; font-size: 0.95rem; font-weight: 700; color: #0f172a;
+  background: linear-gradient(135deg, var(--orbit-cyan), #0284c7);
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35);
+  cursor: pointer; transition: all 0.3s ease;
+}
+.lg-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(56, 189, 248, 0.5);
+  filter: brightness(1.1);
+}
+.lg-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.lg-submit-arrow { width: 18px; height: 18px; transition: transform 0.2s; }
+.lg-submit:hover:not(:disabled) .lg-submit-arrow { transform: translateX(4px); }
+
+.lg-foot {
+  margin-top: 24px; text-align: center;
+  font-size: 0.78rem; color: #64748b;
 }
 
-.fixed-input {
-    width: 100%;
-    padding: 14px 18px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 14px;
-    background: #f8fafc;
-    color: var(--text-dark);
-    font-size: 1rem;
-    box-sizing: border-box;
-    transition: all 0.3s ease;
+/* Estilos para el Título Principal ORBIT HORIZON */
+.lg-title {
+  margin: 0;
+  line-height: 1;
 }
 
-.fixed-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background: white;
-    box-shadow: 0 0 0 4px rgba(227, 58, 170, 0.1);
+.lg-title-main {
+  font-size: clamp(3rem, 5.8vw, 4.8rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 70%, var(--orbit-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* Botón de Entrada */
-.btn-login {
-    width: 100%;
-    padding: 16px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 15px;
-    transition: all 0.3s ease;
+/* Eslogan Horizontal "Explora • Conecta • Evoluciona" */
+.lg-slogan-pills {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+  margin-top: 4px;
 }
 
-.btn-login:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(227, 58, 170, 0.3);
+.lg-pill.accent {
+  background: linear-gradient(135deg, var(--orbit-cyan), var(--orbit-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.btn-login:disabled {
-    background-color: #cbd5e1;
-    cursor: not-allowed;
-    transform: none;
+.lg-pill-dot {
+  color: var(--orbit-cyan);
+  font-size: 0.9rem;
+  opacity: 0.7;
 }
 
-.error-text {
-    background: #fee2e2;
-    color: #dc2626;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-top: 15px;
-}
-
-
-/* =========================================
-   RESPONSIVE (Móviles)
-   ========================================= */
-/* =========================================
-   RESPONSIVE: TABLETS (768px a 1024px)
-   ========================================= */
-@media (max-width: 1024px) {
-    .login-info-side {
-        padding: 40px;
-    }
-
-    .info-content h1 {
-        font-size: 3.2rem; /* Reducción proporcional para no romper el layout */
-    }
-
-    .subtitle {
-        font-size: 1.5rem;
-    }
-}
-
-/* =========================================
-   RESPONSIVE: CELULARES Y TABLETS VERTICALES
-   ========================================= */
-@media (max-width: 850px) {
-    .login-container {
-        flex-direction: column; /* Cambio de 50/50 a stack vertical */
-        height: auto;
-        overflow-y: visible;
-    }
-
-    .login-info-side {
-        flex: none;
-        width: 100%;
-        min-height: 40vh; /* El lado azul ahora ocupa la parte superior */
-        padding: 40px 20px;
-        text-align: center;
-        align-items: center;
-    }
-
-    .brand {
-        margin-bottom: 30px;
-        justify-content: center;
-    }
-
-    .info-content h1 {
-        font-size: 2.8rem;
-    }
-
-    .subtitle {
-        font-size: 1.3rem;
-        margin-bottom: 15px;
-    }
-
-    .description {
-        margin: 0 auto;
-        font-size: 1rem;
-    }
-
-    .login-form-side {
-        flex: none;
-        width: 100%;
-        padding: 40px 15px;
-        background-color: var(--bg-light);
-    }
-
-    .login-card {
-        padding: 30px 20px;
-        max-width: 100%; /* La tarjeta se ajusta al ancho del móvil */
-        box-shadow: none; /* Opcional: limpiar sombras pesadas en móvil */
-        border-radius: 20px;
-    }
-}
-
-/* =========================================
-   RESPONSIVE: CELULARES PEQUEÑOS
-   ========================================= */
 @media (max-width: 480px) {
-    .info-content h1 {
-        font-size: 2.2rem;
-    }
+  .lg-slogan-pills {
+    font-size: 1rem;
+    gap: 8px;
+  }
+}
 
-    .subtitle {
-        font-size: 1.1rem;
-    }
+/* ============================================================
+   ESTILOS MINIMALISTAS (CHIPS SUTILES)
+   ============================================================ */
 
-    .login-card h2 {
-        font-size: 1.6rem;
-    }
+.lg-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
 
-    .fixed-input {
-        padding: 12px 15px; /* Inputs ligeramente más compactos */
-    }
+/* Reemplazo de las 3 cards por chips sutiles y limpios */
+.lg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
 
-    .btn-login {
-        padding: 14px;
-    }
+.lg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.lg-chip:hover {
+  color: #f1f5f9;
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+/* Slogan Horizontal */
+.lg-slogan-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.lg-slogan-pills .accent {
+  background: linear-gradient(135deg, var(--orbit-cyan), var(--orbit-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lg-pill-dot {
+  color: var(--orbit-cyan);
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+/* ANIMACIONES GLOBALES */
+@keyframes lgFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes lgScaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+
+/* ============================================================
+   ORBIT HORIZON · RESPONSIVE COMPLETO
+   (Laptops, Tablets / iPads & Mobile)
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. LAPTOPS Y PANTALLAS MEDIANAS (Max: 1100px)
+   ------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .lg-shell {
+    gap: 36px;
+    padding: 32px 24px;
+  }
+
+  .lg-title-main {
+    font-size: clamp(2.6rem, 5vw, 3.8rem);
+  }
+
+  .lg-slogan-pills {
+    font-size: 1.05rem;
+  }
+
+  .lg-card {
+    padding: 34px 28px;
+  }
+}
+
+/* ------------------------------------------------------------
+   2. TABLETS Y IPADS EN ORIENTACIÓN VERTICAL (Max: 960px)
+   ------------------------------------------------------------ */
+@media (max-width: 960px) {
+  .lg-page {
+    overflow-y: auto;
+  }
+
+  .lg-shell {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 40px 24px;
+    max-width: 640px;
+  }
+
+  .lg-intro {
+    align-items: center;
+    text-align: center;
+    gap: 28px;
+  }
+
+  .lg-brand {
+    justify-content: center;
+  }
+
+  .lg-badge {
+    align-self: center;
+  }
+
+  .lg-tagline p {
+    width: 100%;
+    text-align: center;
+  }
+
+  .lg-slogan-pills {
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  .lg-chips {
+    justify-content: center;
+  }
+
+  .lg-features {
+    width: 100%;
+  }
+
+  .lg-feature {
+    text-align: left;
+  }
+
+  .lg-panel {
+    width: 100%;
+  }
+
+  .lg-card {
+    max-width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------
+   3. DISPOSITIVOS MÓVILES GRANDES E IPADS PEQUEÑAS (Max: 640px)
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .lg-shell {
+    padding: 28px 18px;
+    gap: 32px;
+  }
+
+  .lg-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+
+  .lg-brand-text strong {
+    font-size: 1rem;
+  }
+
+  .lg-brand-text span {
+    font-size: 0.7rem;
+  }
+
+  .lg-badge {
+    font-size: 0.72rem;
+    padding: 5px 12px;
+  }
+
+  .lg-title-main {
+    font-size: 2.3rem;
+  }
+
+  .lg-slogan-pills {
+    font-size: 0.95rem;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .lg-tagline {
+    height: 36px;
+  }
+
+  .lg-tagline p {
+    font-size: 0.92rem;
+  }
+
+  .lg-card {
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
+
+  .lg-card-head h2 {
+    font-size: 1.35rem;
+  }
+
+  .lg-page .lg-input-wrap input {
+    padding: 12px 14px 12px 42px;
+    font-size: 0.88rem;
+  }
+
+  .lg-input-icon {
+    left: 14px;
+  }
+
+  .lg-submit {
+    padding: 13px;
+    font-size: 0.88rem;
+  }
+
+  /* Ajuste de luces difusas en móviles */
+  .lg-space-glow.glow-1 {
+    width: 300px;
+    height: 300px;
+    top: -50px;
+    left: -50px;
+  }
+
+  .lg-space-glow.glow-2 {
+    width: 320px;
+    height: 320px;
+    bottom: -80px;
+    right: -50px;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. SMARTPHONES COMPACTOS (Max: 420px)
+   ------------------------------------------------------------ */
+@media (max-width: 420px) {
+  .lg-shell {
+    padding: 20px 14px;
+    gap: 24px;
+  }
+
+  .lg-title-main {
+    font-size: 1.95rem;
+  }
+
+  .lg-slogan-pills {
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+
+  .lg-pill-dot {
+    font-size: 0.65rem;
+  }
+
+  .lg-chips {
+    gap: 6px;
+  }
+
+  .lg-chip {
+    padding: 6px 12px;
+    font-size: 0.72rem;
+  }
+
+  .lg-card {
+    padding: 22px 16px;
+    border-radius: 18px;
+  }
+
+  .lg-eyebrow {
+    font-size: 0.65rem;
+  }
+
+  .lg-card-head h2 {
+    font-size: 1.2rem;
+  }
+
+  .lg-form {
+    gap: 15px;
+  }
+
+  .lg-field label {
+    font-size: 0.7rem;
+  }
+
+  .lg-foot {
+    font-size: 0.72rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   5. ACCESIBILIDAD Y RENDIMIENTO (Movimiento Reducido)
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .stars,
+  .stars::after,
+  .shooting-star,
+  .lg-intro,
+  .lg-card {
+    animation: none;
+    transition: none;
+  }
 }

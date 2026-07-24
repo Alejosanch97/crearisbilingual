@@ -1,0 +1,741 @@
+/* ============================================================
+   LUMI GAMES · PARTE 2 — SPACE BLAST + BOHR ORBIT
+   Añade después de games-part1.css en tu Styles/planning.css
+   (requiere la base compartida de la parte 1)
+   ============================================================ */
+
+/* ============================================================
+   SPACE BLAST
+   ============================================================ */
+.space-zone {
+  position: relative;
+  height: 320px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.10)),
+    radial-gradient(70% 60% at 50% 0%, rgba(139,111,212,0.22), transparent 72%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--g-line);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 10px rgba(38,48,74,0.05);
+  transition: box-shadow 0.3s;
+}
+
+/* Campo de estrellas en movimiento */
+.space-stars {
+  position: absolute;
+  inset: -50% 0 0 0;
+  height: 200%;
+  background-image:
+    radial-gradient(rgba(38,48,74,0.16) 1px, transparent 1px),
+    radial-gradient(rgba(139,111,212,0.18) 1px, transparent 1px);
+  background-size: 58px 58px, 122px 122px;
+  background-position: 0 0, 38px 74px;
+  animation: spaceTravel 6s linear infinite;
+  pointer-events: none;
+  opacity: 0.75;
+}
+@keyframes spaceTravel {
+  from { transform: translateY(0); }
+  to { transform: translateY(122px); }
+}
+
+/* Cápsulas enemigas (las opciones) */
+.space-capsule {
+  position: absolute;
+  top: 26px;
+  transform: translateX(-50%);
+  min-width: 74px;
+  max-width: 130px;
+  padding: 11px 14px;
+  border-radius: 16px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--g-ink);
+  background: linear-gradient(140deg, rgba(212,127,158,0.40), var(--glass-strong));
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 5px 18px rgba(212, 127, 158, 0.25);
+  z-index: 3;
+  animation: capsuleFloat 2.6s ease-in-out infinite alternate;
+}
+.space-capsule:nth-child(3) { animation-delay: 0.4s; }
+.space-capsule:nth-child(4) { animation-delay: 0.8s; }
+.space-capsule:nth-child(5) { animation-delay: 1.2s; }
+@keyframes capsuleFloat {
+  from { transform: translate(-50%, 0); }
+  to { transform: translate(-50%, 10px); }
+}
+
+/* Disparos */
+.space-shot {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 20px;
+  border-radius: 4px;
+  z-index: 2;
+  will-change: top;
+}
+.space-shot.player {
+  background: linear-gradient(180deg, var(--t-cyan), rgba(79,168,199,0.2));
+  box-shadow: 0 0 10px rgba(79, 168, 199, 0.8);
+}
+.space-shot.enemy {
+  background: linear-gradient(180deg, rgba(217,162,80,0.25), var(--t-amber));
+  box-shadow: 0 0 10px rgba(217, 162, 80, 0.8);
+}
+
+/* Nave del jugador */
+.space-ship {
+  position: absolute;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 17px solid transparent;
+  border-right: 17px solid transparent;
+  border-bottom: 34px solid transparent;
+  border-bottom-color: var(--t-cyan);
+  filter: drop-shadow(0 0 10px rgba(79, 168, 199, 0.7));
+  z-index: 4;
+  transition: left 0.16s cubic-bezier(.16, 1, .3, 1);
+}
+/* Propulsor */
+.space-ship::after {
+  content: '';
+  position: absolute;
+  top: 34px; left: -6px;
+  width: 12px; height: 11px;
+  border-radius: 50%;
+  background: var(--t-amber);
+  filter: blur(2px);
+  animation: engineBurn 0.16s infinite alternate;
+}
+@keyframes engineBurn {
+  from { opacity: 0.5; transform: scaleY(0.8); }
+  to { opacity: 1; transform: scaleY(1.25); }
+}
+
+/* Sacudida al recibir daño */
+.space-zone.shake { animation: zoneShake 0.3s ease; }
+@keyframes zoneShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  75% { transform: translateX(7px); }
+}
+
+.space-controls {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.space-controls .game-btn.ctrl { min-width: 60px; font-size: 1.05rem; }
+
+@media (max-width: 620px) {
+  .space-zone { height: 250px; }
+  .space-controls { grid-template-columns: 1fr 1.4fr 1fr; }
+  .space-controls .game-btn.ghost { grid-column: 1 / -1; }
+}
+
+
+/* ============================================================
+   BOHR ORBIT
+   ============================================================ */
+.orbit-zone {
+  position: relative;
+  height: 340px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.12)),
+    radial-gradient(50% 50% at 50% 50%, rgba(79,168,199,0.20), transparent 72%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--g-line);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 10px rgba(38,48,74,0.05);
+  transition: box-shadow 0.3s;
+}
+
+/* Anillo de la órbita */
+.orbit-ring {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 76%; height: 76%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px dashed rgba(38, 48, 74, 0.18);
+  pointer-events: none;
+}
+/* Anillo interior decorativo */
+.orbit-zone::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 40%; height: 40%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+/* Núcleo */
+.orbit-core {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--t-cyan), var(--t-violet));
+  box-shadow:
+    0 0 0 6px rgba(255, 255, 255, 0.45),
+    0 8px 26px rgba(139, 111, 212, 0.38);
+  z-index: 5;
+  animation: corePulse 2.6s ease-in-out infinite;
+}
+@keyframes corePulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(255,255,255,0.45), 0 8px 26px rgba(139,111,212,0.38); }
+  50% { box-shadow: 0 0 0 11px rgba(255,255,255,0.28), 0 8px 32px rgba(139,111,212,0.5); }
+}
+
+/* Nodos con las opciones */
+.orbit-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 68px;
+  max-width: 116px;
+  padding: 9px 13px;
+  border-radius: 30px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--g-ink);
+  background: linear-gradient(140deg, rgba(82,181,150,0.40), var(--glass-strong));
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(82, 181, 150, 0.24);
+  z-index: 4;
+  will-change: left, top;
+}
+
+/* Rayo disparado */
+.orbit-beam {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--t-rose);
+  box-shadow: 0 0 12px rgba(212, 127, 158, 0.9);
+  z-index: 3;
+  will-change: left, top;
+}
+
+/* Cañón que gira desde el núcleo */
+.orbit-cannon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 58px;
+  border-radius: 4px;
+  /* El pivote está en la BASE de la barra (abajo), que coincide con el núcleo */
+  transform-origin: 50% 100%;
+  /* -50% en X para centrar; -100% en Y para que la barra suba desde el centro */
+  background: linear-gradient(0deg, rgba(139,111,212,0.25), var(--t-violet));
+  box-shadow: 0 0 10px rgba(139, 111, 212, 0.55);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.orbit-controls {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+
+
+
+
+
+
+
+
+.space-zone {
+  position: relative;
+  height: 330px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 70% at 50% 100%, rgba(139,111,212,0.20), transparent 70%),
+    linear-gradient(180deg, #0d1b2e 0%, #16263f 60%, #1d3350 100%);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 2px 10px rgba(38,48,74,0.05);
+  transition: box-shadow 0.3s;
+}
+
+/* Tres capas de estrellas a distinta velocidad (parallax) */
+.space-stars {
+  position: absolute;
+  inset: -50% 0 0 0;
+  height: 200%;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 8%, #fff, transparent),
+    radial-gradient(1px 1px at 32% 22%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1.5px 1.5px at 58% 12%, #fff, transparent),
+    radial-gradient(1px 1px at 78% 28%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(2px 2px at 88% 6%, #cfe6ff, transparent),
+    radial-gradient(1px 1px at 22% 42%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1.5px 1.5px at 45% 55%, #fff, transparent),
+    radial-gradient(1px 1px at 68% 48%, rgba(207,230,255,0.9), transparent),
+    radial-gradient(1px 1px at 8% 68%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.5px 1.5px at 92% 62%, #fff, transparent),
+    radial-gradient(1px 1px at 38% 78%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 72% 88%, rgba(207,230,255,0.8), transparent);
+  background-size: 100% 50%;
+  background-repeat: repeat-y;
+  animation: spaceTravel 5s linear infinite;
+}
+/* Segunda capa más lenta = profundidad */
+.space-zone::after {
+  content: '';
+  position: absolute;
+  inset: -50% 0 0 0;
+  height: 200%;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 18% 15%, rgba(255,255,255,0.45), transparent),
+    radial-gradient(1px 1px at 52% 35%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 82% 25%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 28% 65%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 62% 82%, rgba(255,255,255,0.45), transparent);
+  background-size: 100% 50%;
+  background-repeat: repeat-y;
+  animation: spaceTravel 11s linear infinite;
+  opacity: 0.7;
+}
+@keyframes spaceTravel {
+  from { transform: translateY(0); }
+  to { transform: translateY(50%); }
+}
+
+
+.space-capsule {
+  position: absolute;
+  top: 26px;
+  transform: translateX(-50%);
+  min-width: 74px;
+  max-width: 130px;
+  padding: 12px 15px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.25;
+  color: #eafff5;
+  background: rgba(13, 32, 26, 0.92);
+  border: 2px solid #4ade9b;
+  box-shadow: 0 0 18px rgba(74, 222, 155, 0.55), inset 0 0 12px rgba(74,222,155,0.14);
+  z-index: 3;
+  animation: capsuleFloat 2.6s ease-in-out infinite alternate;
+}
+.space-capsule:nth-child(3) { animation-delay: 0.4s; }
+.space-capsule:nth-child(4) { animation-delay: 0.8s; }
+.space-capsule:nth-child(5) { animation-delay: 1.2s; }
+@keyframes capsuleFloat {
+  from { transform: translate(-50%, 0); }
+  to { transform: translate(-50%, 10px); }
+}
+
+
+
+.space-ship {
+  position: absolute;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-bottom: 32px solid #93a4bd;
+  filter: drop-shadow(0 0 8px rgba(147, 164, 189, 0.8));
+  z-index: 4;
+  transition: left 0.16s cubic-bezier(.16, 1, .3, 1);
+}
+.space-ship::after {
+  content: '';
+  position: absolute;
+  top: 30px; left: -7px;
+  width: 14px; height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffb340 0%, #ff7a1a 60%, transparent 75%);
+  filter: blur(1px);
+  animation: engineBurn 0.14s infinite alternate;
+}
+@keyframes engineBurn {
+  from { opacity: 0.6; transform: scaleY(0.75); }
+  to { opacity: 1; transform: scaleY(1.3); }
+}
+
+
+
+.space-shot.player {
+  background: linear-gradient(180deg, #7dd3fc, rgba(125,211,252,0.15));
+  box-shadow: 0 0 12px rgba(125, 211, 252, 0.95);
+}
+.space-shot.enemy {
+  background: linear-gradient(180deg, rgba(251,191,36,0.2), #fbbf24);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.95);
+}
+
+
+
+
+
+/* Cápsula en modo letra (cuando hay respuestas largas) */
+.space-capsule.letter {
+  min-width: 58px;
+  max-width: 58px;
+  padding: 14px 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Leyenda de opciones dentro del bloque de pregunta */
+.space-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.55);
+}
+@media (max-width: 760px) {
+  .space-legend { grid-template-columns: 1fr; }
+}
+
+.space-legend-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  padding: 11px 13px;
+}
+
+.space-legend-key {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0d201a;
+  background: #4ade9b;
+  box-shadow: 0 0 8px rgba(74, 222, 155, 0.45);
+}
+
+.space-legend-item p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--g-ink);
+}
+
+
+.orbit-node.letter {
+  min-width: 46px;
+  max-width: 46px;
+  padding: 11px 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.orbit-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.55);
+}
+@media (max-width: 760px) { .orbit-legend { grid-template-columns: 1fr; } }
+
+.orbit-legend-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  padding: 11px 13px;
+}
+.orbit-legend-key {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  font-size: 0.78rem; font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--t-mint), var(--t-cyan));
+  box-shadow: 0 2px 8px rgba(82, 181, 150, 0.35);
+}
+.orbit-legend-item p {
+  margin: 0; font-size: 0.8rem; line-height: 1.5;
+  font-weight: 500; color: var(--g-ink);
+}
+
+
+@media (max-width: 620px) {
+  .orbit-zone { height: 280px; }
+  .orbit-core { width: 60px; height: 60px; font-size: 0.7rem; }
+  .orbit-node { min-width: 56px; font-size: 0.68rem; padding: 7px 10px; }
+  .orbit-controls { grid-template-columns: 1fr 1.3fr 1fr; }
+  .orbit-controls .game-btn.ghost { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-stars, .space-capsule, .space-ship::after,
+  .orbit-core, .space-zone.shake { animation: none; }
+}
+
+
+
+
+/* ============================================================
+   LUMI GAMES · PARTE 2 RESPONSIVE
+   (Space Blast + Bohr Orbit)
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. LAPTOPS Y PANTALLAS MEDIANAS (Max: 1024px)
+   ------------------------------------------------------------ */
+@media (max-width: 1024px) {
+  .space-zone {
+    height: 300px;
+  }
+
+  .orbit-zone {
+    height: 310px;
+  }
+
+  .space-capsule {
+    max-width: 115px;
+    padding: 10px 12px;
+    font-size: 0.75rem;
+  }
+
+  .orbit-node {
+    max-width: 105px;
+    padding: 8px 11px;
+    font-size: 0.72rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   2. TABLETS / IPADS EN ORIENTACIÓN HORIZONTAL O VERTICAL (Max: 850px)
+   ------------------------------------------------------------ */
+@media (max-width: 850px) {
+  .space-zone {
+    height: 280px;
+    border-radius: 18px;
+  }
+
+  .orbit-zone {
+    height: 290px;
+    border-radius: 18px;
+  }
+
+  /* Ajuste de órbita y núcleo en iPad */
+  .orbit-core {
+    width: 66px;
+    height: 66px;
+    font-size: 0.74rem;
+  }
+
+  .orbit-cannon {
+    height: 50px;
+    width: 5px;
+  }
+
+  /* Leyendas de opciones en 1 sola columna si el espacio aprieta */
+  .space-legend,
+  .orbit-legend {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .space-legend-item,
+  .orbit-legend-item {
+    padding: 9px 11px;
+  }
+}
+
+/* ------------------------------------------------------------
+   3. DISPOSITIVOS MÓVILES Y IPADS PEQUEÑAS (Max: 620px)
+   ------------------------------------------------------------ */
+@media (max-width: 620px) {
+  /* --- SPACE BLAST MÓVIL --- */
+  .space-zone {
+    height: 250px;
+    border-radius: 16px;
+  }
+
+  .space-capsule {
+    top: 18px;
+    min-width: 58px;
+    max-width: 95px;
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    border-radius: 10px;
+  }
+
+  .space-capsule.letter {
+    min-width: 44px;
+    max-width: 44px;
+    padding: 8px 0;
+    font-size: 1.25rem;
+  }
+
+  .space-ship {
+    bottom: 12px;
+    border-left-width: 13px;
+    border-right-width: 13px;
+    border-bottom-width: 26px;
+  }
+
+  .space-ship::after {
+    top: 24px;
+    left: -5px;
+    width: 10px;
+    height: 9px;
+  }
+
+  .space-controls {
+    grid-template-columns: 1fr 1.4fr 1fr;
+    gap: 8px;
+  }
+
+  .space-controls .game-btn.ghost {
+    grid-column: 1 / -1;
+  }
+
+  .space-controls .game-btn.ctrl {
+    min-width: 48px;
+    font-size: 0.95rem;
+  }
+
+  /* --- BOHR ORBIT MÓVIL --- */
+  .orbit-zone {
+    height: 270px;
+    border-radius: 16px;
+  }
+
+  .orbit-ring {
+    width: 82%;
+    height: 82%;
+  }
+
+  .orbit-core {
+    width: 58px;
+    height: 58px;
+    font-size: 0.68rem;
+  }
+
+  .orbit-cannon {
+    height: 42px;
+    width: 4px;
+  }
+
+  .orbit-node {
+    min-width: 50px;
+    max-width: 88px;
+    padding: 6px 9px;
+    font-size: 0.66rem;
+    border-radius: 20px;
+  }
+
+  .orbit-node.letter {
+    min-width: 38px;
+    max-width: 38px;
+    padding: 7px 0;
+    font-size: 1.05rem;
+  }
+
+  .orbit-controls {
+    grid-template-columns: 1fr 1.3fr 1fr;
+    gap: 8px;
+  }
+
+  .orbit-controls .game-btn.ghost {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. SMARTPHONES COMPACTOS (Max: 420px)
+   ------------------------------------------------------------ */
+@media (max-width: 420px) {
+  .space-zone {
+    height: 220px;
+  }
+
+  .space-capsule {
+    min-width: 50px;
+    max-width: 80px;
+    padding: 6px 8px;
+    font-size: 0.65rem;
+  }
+
+  .orbit-zone {
+    height: 240px;
+  }
+
+  .orbit-core {
+    width: 50px;
+    height: 50px;
+    font-size: 0.62rem;
+  }
+
+  .orbit-cannon {
+    height: 36px;
+  }
+
+  .orbit-node {
+    min-width: 44px;
+    max-width: 76px;
+    padding: 5px 7px;
+    font-size: 0.62rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   5. ACCESIBILIDAD (Movimiento reducido)
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .space-stars,
+  .space-zone::after,
+  .space-capsule,
+  .space-ship::after,
+  .orbit-core,
+  .space-zone.shake {
+    animation: none;
+    transition: none;
+  }
+}

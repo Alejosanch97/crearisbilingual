@@ -1,0 +1,425 @@
+/* ============================================================
+   LUMI GAMES · PARTE 3 — LUMI DASH
+   Añade después de games-part2.css en tu Styles/planning.css
+   (requiere la base compartida de la parte 1)
+   ============================================================ */
+
+.dash-zone {
+  position: relative;
+  height: 300px;
+  border-radius: 22px;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.10)),
+    radial-gradient(80% 60% at 50% 0%, rgba(139,111,212,0.18), transparent 72%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--g-line);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 10px rgba(38,48,74,0.05);
+  transition: box-shadow 0.3s;
+}
+
+/* Rejilla que se desplaza (sensación de carrera) */
+.dash-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(38,48,74,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,48,74,0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: dashScroll 0.45s linear infinite;
+  pointer-events: none;
+}
+@keyframes dashScroll {
+  from { background-position: 0 0; }
+  to { background-position: -32px 0; }
+}
+
+/* Suelo */
+.dash-floor {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 26px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.30));
+  border-top: 2px solid var(--t-cyan);
+  box-shadow: 0 -2px 14px rgba(79, 168, 199, 0.35);
+  z-index: 2;
+}
+
+/* ---------- Personaje ---------- */
+.dash-player {
+  position: absolute;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(140deg, var(--t-cyan), #6fc4dd);
+  box-shadow: 0 0 16px rgba(79, 168, 199, 0.75), inset 0 -3px 0 rgba(38,48,74,0.12);
+  z-index: 6;
+   animation: dashBob 0.18s infinite alternate linear;
+  will-change: bottom;
+}
+/* Punto de luz (el "ojo" del original) */
+.dash-player::after {
+  content: '';
+  position: absolute;
+  top: 7px; right: 7px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+
+.dash-player.hurt {
+  animation: dashHurt 0.14s infinite alternate;
+}
+@keyframes dashBob {
+  from { transform: translateX(-50%) scaleY(1); }
+  to { transform: translateX(-50%) scaleY(0.93); }
+}
+@keyframes dashHurt {
+  from { background: linear-gradient(140deg, var(--t-cyan), #6fc4dd); box-shadow: 0 0 16px rgba(79,168,199,0.75); }
+  to { background: linear-gradient(140deg, var(--t-rose), #e79cb6); box-shadow: 0 0 20px rgba(212,127,158,0.9); }
+}
+
+/* ---------- Obstáculos ---------- */
+.dash-obstacle {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  z-index: 5;
+  will-change: left;
+}
+/* Rojo: va por el suelo, hay que SALTARLO */
+.dash-obstacle.floor {
+  bottom: 26px;
+  background: linear-gradient(140deg, var(--t-rose), #c4517c);
+  box-shadow: 0 0 14px rgba(196, 81, 124, 0.6);
+  transform: translateX(-50%) rotate(45deg);
+}
+/* Amarillo: va por el aire, hay que NO saltar */
+.dash-obstacle.air {
+  bottom: 118px;
+  background: linear-gradient(140deg, var(--t-amber), #c98a2b);
+  box-shadow: 0 0 14px rgba(201, 138, 43, 0.6);
+  transform: translateX(-50%) rotate(15deg);
+}
+
+/* ---------- Portal (el favorito del original) ---------- */
+.dash-portal {
+  position: absolute;
+  top: 0; bottom: 26px;
+  right: -90px;
+  width: 52px;
+  border-radius: 50%;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(139, 111, 212, 0.85) 30%,
+    rgba(212, 127, 158, 0.9) 65%,
+    transparent 100%);
+  box-shadow: 0 0 40px rgba(212, 127, 158, 0.65), 0 0 80px rgba(139, 111, 212, 0.4);
+  z-index: 4;
+  transition: right 0.8s cubic-bezier(.16, 1, .3, 1);
+  pointer-events: none;
+}
+.dash-portal.in {
+  right: 28%;
+  animation: portalGlow 0.9s ease-in-out infinite alternate;
+}
+@keyframes portalGlow {
+  from { box-shadow: 0 0 40px rgba(212,127,158,0.65), 0 0 80px rgba(139,111,212,0.4); }
+  to { box-shadow: 0 0 60px rgba(212,127,158,0.9), 0 0 110px rgba(139,111,212,0.6); }
+}
+
+/* ---------- Controles ---------- */
+.dash-controls {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ---------- Pantalla de pregunta del portal ---------- */
+.dash-quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: gFade 0.45s cubic-bezier(.16, 1, .3, 1);
+  border-radius: 22px;
+  transition: box-shadow 0.3s;
+}
+
+.game-question.portal {
+  background:
+    linear-gradient(120deg, rgba(212,127,158,0.30), rgba(139,111,212,0.26)),
+    var(--glass);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 6px 26px rgba(139, 111, 212, 0.20);
+}
+.game-question.portal p { font-size: 1.04rem; }
+
+.dash-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 620px) {
+  .dash-options { grid-template-columns: 1fr; }
+}
+
+.dash-option {
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: var(--glass-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--g-ink);
+  box-shadow: 0 2px 10px rgba(38, 48, 74, 0.06);
+  transition: all 0.22s cubic-bezier(.16, 1, .3, 1);
+}
+.dash-option:hover:not(:disabled) {
+  transform: translateY(-3px);
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(38, 48, 74, 0.12);
+}
+.dash-option:disabled { cursor: default; }
+.dash-option.right {
+  background: linear-gradient(140deg, rgba(82,181,150,0.48), var(--glass-strong));
+  border-color: rgba(82, 181, 150, 0.6);
+  color: #2c7a5f;
+  box-shadow: 0 6px 22px rgba(82, 181, 150, 0.28);
+}
+.dash-option.wrong {
+  background: linear-gradient(140deg, rgba(212,127,158,0.42), var(--glass-strong));
+  border-color: rgba(212, 127, 158, 0.55);
+  color: #a94570;
+}
+
+.dash-feedback {
+  margin: 0;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--g-ink-soft);
+  animation: gFade 0.3s ease;
+}
+
+.dash-player.airborne { animation: none; }
+.dash-portal.live {
+  right: auto;
+  transform: translateX(-50%);
+  transition: none;
+  animation: portalGlow 0.9s ease-in-out infinite alternate;
+}
+
+@media (max-width: 620px) {
+  .dash-zone { height: 240px; }
+  .dash-player.jump { bottom: 110px; }
+  .dash-obstacle.air { bottom: 96px; }
+  .dash-controls { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-grid, .dash-player, .dash-player.hurt, .dash-portal.in { animation: none; }
+}
+
+/* ============================================================
+   LUMI DASH — RESPONSIVE COMPLETO (PANTALLAS, IPADS Y CELULARES)
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. LAPTOPS Y PANTALLAS MEDIANAS (Max: 1024px)
+   ------------------------------------------------------------ */
+@media (max-width: 1024px) {
+  .dash-zone {
+    height: 280px;
+  }
+
+  .dash-option {
+    padding: 14px 16px;
+    font-size: 0.88rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   2. IPADS Y TABLETS (Orientación Vertical / Horizontal - Max: 850px)
+   ------------------------------------------------------------ */
+@media (max-width: 850px) {
+  .dash-zone {
+    height: 260px;
+    border-radius: 18px;
+  }
+
+  /* Ajuste proporcional de personaje y obstáculos en tablets */
+  .dash-player {
+    width: 30px;
+    height: 30px;
+  }
+
+  .dash-obstacle {
+    width: 24px;
+    height: 24px;
+  }
+
+  .dash-obstacle.air {
+    bottom: 105px;
+  }
+
+  /* Ajuste de controles principales */
+  .dash-controls {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dash-portal.in {
+    right: 20%;
+  }
+
+  .game-question.portal p {
+    font-size: 0.98rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   3. CELULARES GRANDES Y IPADS PEQUEÑAS (Max: 620px)
+   ------------------------------------------------------------ */
+@media (max-width: 620px) {
+  .dash-zone {
+    height: 230px;
+    border-radius: 16px;
+  }
+
+  .dash-grid {
+    background-size: 24px 24px;
+  }
+
+  .dash-floor {
+    height: 22px;
+  }
+
+  /* Reducción visual del jugador y colisiones móviles */
+  .dash-player {
+    width: 28px;
+    height: 28px;
+    bottom: 22px;
+    border-radius: 7px;
+  }
+
+  .dash-player::after {
+    top: 5px;
+    right: 5px;
+    width: 5px;
+    height: 5px;
+  }
+
+  /* Ajuste de los obstáculos en pantalla vertical corta */
+  .dash-obstacle {
+    width: 22px;
+    height: 22px;
+  }
+
+  .dash-obstacle.floor {
+    bottom: 22px;
+  }
+
+  .dash-obstacle.air {
+    bottom: 90px;
+  }
+
+  /* Reducción proporcional del Portal */
+  .dash-portal {
+    width: 42px;
+    bottom: 22px;
+  }
+
+  /* Conversión del Quiz a 1 sola columna para facilitar los toques */
+  .dash-quiz {
+    gap: 10px;
+    border-radius: 16px;
+  }
+
+  .dash-options {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dash-option {
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    border-radius: 14px;
+  }
+
+  .dash-feedback {
+    font-size: 0.82rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. CELULARES COMPACTOS (Max: 420px)
+   ------------------------------------------------------------ */
+@media (max-width: 420px) {
+  .dash-zone {
+    height: 200px;
+  }
+
+  .dash-player {
+    width: 24px;
+    height: 24px;
+    bottom: 20px;
+  }
+
+  .dash-floor {
+    height: 20px;
+  }
+
+  .dash-obstacle {
+    width: 18px;
+    height: 18px;
+  }
+
+  .dash-obstacle.floor {
+    bottom: 20px;
+  }
+
+  .dash-obstacle.air {
+    bottom: 80px;
+  }
+
+  .game-question.portal {
+    padding: 12px;
+  }
+
+  .game-question.portal p {
+    font-size: 0.9rem;
+  }
+
+  .dash-option {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   5. ACCESIBILIDAD (Movimiento reducido)
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .dash-grid, 
+  .dash-player, 
+  .dash-player.hurt, 
+  .dash-portal.in,
+  .dash-portal.live { 
+    animation: none; 
+    transition: none;
+  }
+}

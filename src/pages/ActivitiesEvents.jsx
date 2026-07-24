@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../Styles/planning.css';
+import { CalendarDays, Eye, Pencil, Star, Hand, RefreshCw, User, Clock, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxIgwbIuGymDkRREiidM0lJYZRi5KdKS217_inoU751zp_x3EAzzxcljjNHSxZc34zBxQ/exec';
 
@@ -10,6 +11,8 @@ export const ActivitiesEvents = ({ userData }) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [showDetailForm, setShowDetailForm] = useState(false);
     const [summaryData, setSummaryData] = useState(null); 
+
+     const [filterMode, setFilterMode] = useState('all');
 
     const isAdmin = userData.ROL?.toUpperCase() === 'ADMIN';
 
@@ -185,61 +188,129 @@ export const ActivitiesEvents = ({ userData }) => {
         return { color: "#10b981", label: "Form Completed" };
     };
 
+    const myName = userData.Teacher_Name || userData.Full_Name || userData.name;
+    const visibleActivities = activities.filter(act => {
+        if (filterMode === 'mine') return act.Responsable_ID === myName;
+        if (filterMode === 'free') return !act.Responsable_ID;
+        return true;
+    });
+    const freeCount = activities.filter(a => !a.Responsable_ID).length;
+    const mineCount = activities.filter(a => a.Responsable_ID === myName).length;
+
     return (
         <div className="planning-wrapper">
-            <header className="page-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                <div className="title-section">
-                    <h1>Activities & Events</h1>
-                    <p>Calendario institucional y diseño pedagógico.</p>
-                </div>
-                <div className={`sync-indicator ${isSyncing ? 'syncing' : 'synced'}`}>
-                    {isSyncing ? "⏳ Syncing..." : "✅ Cloud Synchronized"}
-                </div>
-            </header>
 
-            <div className="activities-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                {activities.map((act) => {
+            <div className="act-toolbar">
+                
+                <div className="act-filters">
+                    <button className={`act-filter ${filterMode === 'all' ? 'on' : ''}`} onClick={() => setFilterMode('all')}>
+                        Todas <span className="act-count">{activities.length}</span>
+                    </button>
+                    <button className={`act-filter ${filterMode === 'mine' ? 'on' : ''}`} onClick={() => setFilterMode('mine')}>
+                        Mis actividades <span className="act-count">{mineCount}</span>
+                    </button>
+                    <button className={`act-filter ${filterMode === 'free' ? 'on' : ''}`} onClick={() => setFilterMode('free')}>
+                        Sin responsable <span className="act-count alert">{freeCount}</span>
+                    </button>
+                </div>
+                
+            </div>
+
+            <div className="act-grid">
+                {visibleActivities.map((act) => {
                     const statusInfo = getSemaforoLogic(act);
                     const progress = calculateProgress(act);
-                    const isMyActivity = act.Responsable_ID === (userData.Teacher_Name || userData.Full_Name || userData.name);
+                    const isMyActivity = act.Responsable_ID === myName;
                     const hasDetail = getExistingDetail(act.ID_Activity);
+                    const isFree = !act.Responsable_ID;
 
                     return (
-                        <div key={act.ID_Activity} className="individual-grade-card" style={{ borderLeft: `6px solid ${statusInfo.color}`, padding: '20px' }}>
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                                <div className="card-tag" style={{ background: statusInfo.color }}>{statusInfo.label}</div>
+                        <article
+                            key={act.ID_Activity}
+                            className={`act-card ${isFree ? 'free' : ''} ${isMyActivity ? 'mine' : ''}`}
+                            style={{ '--act-accent': statusInfo.color }}
+                        >
+                            <div className="act-card-top">
+                                <span className="act-status" style={{ color: statusInfo.color, background: `${statusInfo.color}18`, borderColor: `${statusInfo.color}44` }}>
+                                    {statusInfo.label}
+                                </span>
                                 {hasDetail && (
-                                    <button className="btn-view" style={{cursor: 'pointer'}} onClick={() => handleOpenSummary(act)}>👁️</button>
+                                    <button className="act-icon-btn" title="Ver resumen" onClick={() => handleOpenSummary(act)}>
+                                        <Eye size={16} strokeWidth={2.2} />
+                                    </button>
                                 )}
                             </div>
-                            <h3 style={{marginTop: '10px'}}>{act.Event_Name}</h3>
-                            <p style={{ fontSize: '0.85rem', color: '#64748b', minHeight: '50px' }}>{act.Description}</p>
-                            
-                            <div className="activity-meta" style={{ margin: '15px 0', padding: '10px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                <div><strong>Responsible:</strong> {act.Responsable_ID || "🚫 Unassigned"}</div>
+
+                            <h3 className="act-name">{act.Event_Name}</h3>
+                            {act.Description && <p className="act-desc">{act.Description}</p>}
+
+                            {progress > 0 && progress < 100 && (
+                                <div className="act-progress">
+                                    <div className="act-progress-bar">
+                                        <span style={{ width: `${progress}%`, background: statusInfo.color }} />
+                                    </div>
+                                    <span className="act-progress-num">{progress}%</span>
+                                </div>
+                            )}
+
+                            <div className="act-owner">
+                                {isFree ? (
+                                    <><AlertCircle size={14} strokeWidth={2.2} /> <em>Sin responsable asignado</em></>
+                                ) : (
+                                    <><User size={14} strokeWidth={2.2} /> {act.Responsable_ID}</>
+                                )}
                             </div>
 
-                            <div className="actions" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                                {!act.Responsable_ID ? (
-                                    <button className="btn-main" style={{width: '100%'}} onClick={() => handleAssignMe(act)}>🙋‍♂️ I'll take it</button>
+                            <div className="act-actions">
+                                {isFree ? (
+                                    <button className="act-btn take" onClick={() => handleAssignMe(act)}>
+                                        <Hand size={15} strokeWidth={2.2} /> Tomar actividad
+                                    </button>
                                 ) : (
                                     <>
                                         {isMyActivity && (
-                                            <button className="btn-sync" style={{width: '100%', cursor: 'pointer'}} onClick={() => handleOpenForm(act)}>
-                                                {progress === 100 ? "✅ Edit Completed Form" : "📝 Continue Design"}
+                                            <button className="act-btn primary" onClick={() => handleOpenForm(act)}>
+                                                {progress === 100
+                                                    ? <><CheckCircle2 size={15} strokeWidth={2.2} /> Editar diseño</>
+                                                    : <><Pencil size={15} strokeWidth={2.2} /> Continuar diseño</>}
                                             </button>
                                         )}
                                         {isAdmin && (
-                                            <button className="btn-view" style={{width: '100%', background: '#2563eb', color: 'white'}} onClick={() => handleOpenForm(act)}>
-                                                ⭐ Evaluate Activity
+                                            <button className="act-btn eval" onClick={() => handleOpenForm(act)}>
+                                                <Star size={15} strokeWidth={2.2} /> Evaluar
                                             </button>
                                         )}
                                     </>
                                 )}
                             </div>
-                        </div>
+                        </article>
                     );
                 })}
+
+                {visibleActivities.length === 0 && (
+                    <div className="act-empty">
+                        <div className="act-empty-icon">
+                            <Search size={30} strokeWidth={1.7} />
+                        </div>
+                        <h3>{isSyncing ? 'Buscando actividades…' : 'No hay actividades aquí'}</h3>
+                        <p>
+                            {isSyncing
+                                ? 'Un momento, estamos trayendo el calendario.'
+                                : filterMode === 'free'
+                                    ? 'Todas las actividades ya tienen responsable. ¡Buen trabajo!'
+                                    : filterMode === 'mine'
+                                        ? 'Aún no has tomado ninguna actividad.'
+                                        : 'No hay actividades en el calendario.'}
+                        </p>
+                        {filterMode !== 'all' && (
+                            <div className="act-empty-actions">
+                                <button className="act-btn primary" onClick={() => setFilterMode('all')}>
+                                    Ver todas las actividades
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {showDetailForm && (

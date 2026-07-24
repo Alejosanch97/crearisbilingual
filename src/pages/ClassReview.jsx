@@ -40,7 +40,10 @@ export const ClassReview = ({ userData, teacherList = [] }) => {
         try {
             const resp = await fetch(`${API_URL}?sheet=Class_Observations`);
             const data = await resp.json();
-            if (Array.isArray(data)) setReviews(data);
+             if (Array.isArray(data)) {
+                // Excluye las revisiones de planeación (prefijo PLAN-)
+                setReviews(data.filter(r => !String(r.ID_Lesson_Ref || '').startsWith('PLAN-')));
+            }
         } catch (e) { console.error("Error fetching reviews:", e); }
         setIsSyncing(false);
     };

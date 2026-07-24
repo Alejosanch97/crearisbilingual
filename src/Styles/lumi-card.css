@@ -1,0 +1,544 @@
+/* ============================================================
+   LUMI CARD — Dashboard
+   Añade este bloque al final de tu Styles/dashboard.css
+   ============================================================ */
+
+.lumi-card {
+  --lc-cyan: #06b6d4;
+  --lc-violet: #7c3aed;
+  --lc-grad: linear-gradient(115deg, #06b6d4 0%, #7c3aed 100%);
+  --lc-ink: #1b2438;
+  --lc-dim: #64748b;
+  --lc-line: #e4e9f2;
+
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--lc-line);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 8px 30px rgba(27, 36, 56, 0.07);
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--lc-ink);
+}
+
+/* Glow decorativo */
+.lumi-card-glow {
+  position: absolute;
+  top: -80px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.14), transparent 70%);
+  pointer-events: none;
+}
+
+/* ---------- Zona principal ---------- */
+.lumi-card-main {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+@media (max-width: 640px) {
+  .lumi-card-main { flex-direction: column; text-align: center; }
+}
+
+/* Avatar grande */
+.lumi-avatar-wrap {
+  position: relative;
+  width: 132px; height: 132px;
+  flex-shrink: 0;
+}
+.lumi-avatar-big {
+  width: 100%; height: 100%;
+  border-radius: 30px;
+  padding: 8px;
+  background: linear-gradient(160deg, #f5f3ff, #ecfeff);
+  border: 1px solid var(--lc-line);
+  animation: lumiBreathe 4s ease-in-out infinite;
+  display: block;
+}
+@keyframes lumiBreathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.04) translateY(-3px); }
+}
+.lumi-halo {
+  position: absolute; inset: -8px;
+  border-radius: 36px;
+  border: 2px solid var(--lc-cyan);
+  opacity: 0;
+  animation: lumiPulse 3.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes lumiPulse {
+  0% { opacity: 0.45; transform: scale(0.92); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+.lumi-online-dot {
+  position: absolute; bottom: 8px; right: 8px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: lumiDot 2.4s ease-out infinite;
+}
+@keyframes lumiDot {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  100% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lumi-avatar-big, .lumi-halo, .lumi-online-dot { animation: none; }
+}
+
+/* Cuerpo de texto */
+.lumi-card-body { flex: 1; min-width: 0; }
+.lumi-card-eyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
+  font-weight: 800;
+  margin-bottom: 6px;
+  background: var(--lc-grad);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.lumi-card-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 14px;
+  letter-spacing: -0.02em;
+  color: var(--lc-ink);
+}
+
+/* Cuadro de diálogo */
+.lumi-speech {
+  position: relative;
+  background: #f7f9fc;
+  border: 1px solid var(--lc-line);
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  min-height: 92px;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.lumi-speech.in { opacity: 1; transform: translateY(0); }
+.lumi-speech.out { opacity: 0; transform: translateY(6px); }
+.lumi-speech-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--lc-violet);
+  background: rgba(124, 58, 237, 0.10);
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 8px;
+}
+.lumi-speech p {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--lc-ink);
+}
+
+/* Botones */
+.lumi-card-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 640px) { .lumi-card-actions { justify-content: center; } }
+
+.lumi-btn {
+  padding: 11px 20px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-family: inherit;
+  border: 1px solid transparent;
+}
+.lumi-btn.primary {
+  background: var(--lc-grad);
+  color: #fff;
+}
+.lumi-btn.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.26);
+}
+.lumi-btn.ghost {
+  background: #fff;
+  color: var(--lc-dim);
+  border-color: var(--lc-line);
+}
+.lumi-btn.ghost:hover:not(:disabled) {
+  color: var(--lc-violet);
+  border-color: var(--lc-violet);
+}
+.lumi-btn.full { width: 100%; }
+.lumi-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Personalizador ---------- */
+.lumi-customizer {
+  position: relative;
+  z-index: 2;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--lc-line);
+  animation: lumiSlide 0.35s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes lumiSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lumi-cust-row { margin-bottom: 18px; }
+.lumi-cust-row > label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--lc-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.lumi-cust-row > input[type="text"] {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--lc-line);
+  font-size: 0.94rem;
+  font-family: inherit;
+  background: #f7f9fc;
+  color: var(--lc-ink);
+  box-sizing: border-box;
+}
+.lumi-cust-row > input[type="text"]:focus {
+  outline: none;
+  border-color: var(--lc-violet);
+  background: #fff;
+}
+
+.lumi-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.lumi-opt {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #f1f5f9;
+  border: 1px solid var(--lc-line);
+  color: var(--lc-ink);
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.lumi-opt:hover { border-color: var(--lc-cyan); transform: translateY(-1px); }
+.lumi-opt.on {
+  background: var(--lc-grad);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 5px 14px rgba(124, 58, 237, 0.22);
+}
+
+.lumi-swatch {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  cursor: pointer;
+  border: 2px solid var(--lc-line);
+  transition: all 0.2s;
+  padding: 0;
+}
+.lumi-swatch:hover { transform: scale(1.1); }
+.lumi-swatch.on {
+  border-color: var(--lc-violet);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+  transform: scale(1.08);
+}
+.lumi-swatch.transparent {
+  background:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+  background-color: #fff;
+}
+
+.lumi-cust-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+
+
+
+/* Lumi a ancho completo */
+.lumi-card {
+  width: 100%;
+  margin-bottom: 20px;
+}
+.lumi-card .lumi-card-main { gap: 34px; }
+.lumi-card .lumi-avatar-wrap { width: 160px; height: 160px; }
+.lumi-card .lumi-card-name { font-size: 2.1rem; }
+.lumi-card .lumi-speech { max-width: 720px; }
+.lumi-card .lumi-speech p { font-size: 1.02rem; }
+
+@media (max-width: 700px) {
+  .lumi-card .lumi-avatar-wrap { width: 120px; height: 120px; }
+  .lumi-card .lumi-card-name { font-size: 1.6rem; }
+}
+
+@media (max-width: 640px) {
+  .lumi-cust-actions { flex-direction: column-reverse; }
+  .lumi-cust-actions .lumi-btn { width: 100%; }
+}
+
+
+/* ============================================================
+   LUMI CARD · RESPONSIVE COMPLETO
+   (Computadores, Laptops, iPads / Tablets & SmartPhones)
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. LAPTOPS Y PANTALLAS MEDIANAS (Max: 1100px)
+   ------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .lumi-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+
+  .lumi-card .lumi-card-main {
+    gap: 28px;
+  }
+
+  .lumi-card .lumi-avatar-wrap {
+    width: 140px;
+    height: 140px;
+  }
+
+  .lumi-card .lumi-card-name {
+    font-size: 1.85rem;
+  }
+
+  .lumi-card .lumi-speech p {
+    font-size: 0.98rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   2. TABLETS / IPADS EN ORIENTACIÓN VERTICAL (Max: 850px)
+   ------------------------------------------------------------ */
+@media (max-width: 850px) {
+  .lumi-card {
+    padding: 22px;
+    border-radius: 18px;
+  }
+
+  .lumi-card .lumi-card-main {
+    gap: 22px;
+  }
+
+  .lumi-card .lumi-avatar-wrap {
+    width: 124px;
+    height: 124px;
+  }
+
+  .lumi-card .lumi-card-name {
+    font-size: 1.65rem;
+    margin-bottom: 10px;
+  }
+
+  .lumi-speech {
+    padding: 14px 16px;
+    min-height: 80px;
+  }
+
+  .lumi-speech p {
+    font-size: 0.92rem;
+  }
+
+  .lumi-chip-row {
+    gap: 6px;
+  }
+
+  .lumi-opt {
+    padding: 7px 12px;
+    font-size: 0.78rem;
+  }
+
+  .lumi-swatch {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* ------------------------------------------------------------
+   3. MÓVILES GRANDES Y TABLETS COMPACTAS (Max: 640px)
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .lumi-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  /* Alineación central para móviles */
+  .lumi-card-main,
+  .lumi-card .lumi-card-main {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .lumi-avatar-wrap,
+  .lumi-card .lumi-avatar-wrap {
+    width: 110px;
+    height: 110px;
+    margin: 0 auto;
+  }
+
+  .lumi-avatar-big {
+    border-radius: 22px;
+    padding: 6px;
+  }
+
+  .lumi-halo {
+    border-radius: 28px;
+  }
+
+  .lumi-card-body {
+    width: 100%;
+  }
+
+  .lumi-card-eyebrow {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+
+  .lumi-card-name,
+  .lumi-card .lumi-card-name {
+    font-size: 1.45rem;
+    margin-bottom: 12px;
+  }
+
+  /* Ajuste de la burbuja de diálogo */
+  .lumi-speech,
+  .lumi-card .lumi-speech {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 4px;
+    padding: 14px;
+    text-align: left;
+  }
+
+  .lumi-speech p {
+    font-size: 0.88rem;
+    line-height: 1.48;
+  }
+
+  .lumi-card-actions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .lumi-card-actions .lumi-btn {
+    width: 100%;
+  }
+
+  /* Ajuste de la sección del personalizador */
+  .lumi-customizer {
+    margin-top: 20px;
+    padding-top: 18px;
+  }
+
+  .lumi-cust-row > label {
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .lumi-cust-row > input[type="text"] {
+    padding: 10px 12px;
+    font-size: 0.88rem;
+  }
+
+  .lumi-chip-row {
+    justify-content: center;
+  }
+
+  .lumi-cust-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .lumi-cust-actions .lumi-btn {
+    width: 100%;
+  }
+
+  /* Reducción del resplandor de fondo en pantallas pequeñas */
+  .lumi-card-glow {
+    width: 180px;
+    height: 180px;
+    top: -50px;
+    right: -40px;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. SMARTPHONES COMPACTOS (Max: 420px)
+   ------------------------------------------------------------ */
+@media (max-width: 420px) {
+  .lumi-card {
+    padding: 16px 12px;
+  }
+
+  .lumi-avatar-wrap,
+  .lumi-card .lumi-avatar-wrap {
+    width: 96px;
+    height: 96px;
+  }
+
+  .lumi-card-name,
+  .lumi-card .lumi-card-name {
+    font-size: 1.28rem;
+  }
+
+  .lumi-speech-tag {
+    font-size: 0.62rem;
+    padding: 2px 8px;
+  }
+
+  .lumi-speech p {
+    font-size: 0.84rem;
+  }
+
+  .lumi-btn {
+    padding: 10px 16px;
+    font-size: 0.82rem;
+  }
+
+  .lumi-opt {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+  }
+
+  .lumi-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+}
+
+/* ------------------------------------------------------------
+   5. ACCESIBILIDAD Y PREFERENCIA DE MOVIMIENTO REDUCIDO
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .lumi-avatar-big,
+  .lumi-halo,
+  .lumi-online-dot,
+  .lumi-speech,
+  .lumi-customizer {
+    animation: none;
+    transition: none;
+  }
+}

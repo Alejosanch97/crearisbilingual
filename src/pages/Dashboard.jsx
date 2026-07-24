@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../Styles/dashboard.css"; 
+import { LayoutDashboard, NotebookPen, CalendarDays, Search, LogOut, ChevronRight, RefreshCw, Target, ClipboardList, Trophy, Link2, BookOpen, Wrench, GraduationCap, ArrowRight, Plus, Check, Circle } from 'lucide-react';
 
 import { PlanningCLIL } from "./PlanningCLIL"; 
 import { ActivitiesEvents } from "./ActivitiesEvents";
 import { ClassReview } from "./ClassReview"; 
+import { LumiCard } from './LumiCard';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxIgwbIuGymDkRREiidM0lJYZRi5KdKS217_inoU751zp_x3EAzzxcljjNHSxZc34zBxQ/exec';
 
@@ -21,37 +23,6 @@ const CLIL_TIPS = [
     "Use language frames to guide answers.", "Connect content with real-life examples.", "Pre-teach key vocabulary.",
     "Use visuals to support understanding.", "Encourage students to explain ideas aloud.", "Model complete sentences.",
     "Scaffold before expecting independence.", "Recycle language constantly.", "Ask content + language questions.",
-    "Highlight key words on the board.", "Allow think time before answering.", "Use pair work to lower anxiety.",
-    "Check comprehension frequently.", "Simplify instructions, not content.", "Use gestures and body language.",
-    "Encourage students to justify answers.", "Accept mistakes as part of learning.", "Use sentence starters.",
-    "Link new content to prior knowledge.", "Repeat instructions in different ways.", "Use graphic organizers.",
-    "Promote academic language use.", "Ask students to summarize ideas.", "Use real objects when possible.",
-    "Focus on meaning before accuracy.", "Use cooperative learning strategies.", "Provide word banks.",
-    "Encourage peer support.", "Use short chunks of information.", "Read instructions aloud.",
-    "Encourage students to ask questions.", "Highlight cognates carefully.", "Use color coding for concepts.",
-    "Build routines for language use.", "Integrate listening, speaking, reading, and writing.", "Use examples before definitions.",
-    "Encourage complete answers.", "Use checklists for tasks.", "Provide models of expected output.",
-    "Use charts and diagrams.", "Reinforce key language daily.", "Give feedback on content and language.",
-    "Use repetition with variation.", "Encourage clarification requests.", "Use exit tickets for reflection.",
-    "Ask students to compare ideas.", "Allow collaborative note-taking.", "Use guiding questions.",
-    "Break complex tasks into steps.", "Encourage academic connectors.", "Use visuals before text.",
-    "Promote higher-order thinking.", "Rephrase student answers correctly.", "Use rubrics with language criteria.",
-    "Encourage use of subject-specific vocabulary.", "Use real-world problems.", "Activate background knowledge first.",
-    "Encourage risk-taking in language.", "Use timelines for processes.", "Model pronunciation of key terms.",
-    "Use concept maps.", "Encourage short oral explanations.", "Use comparison tables.",
-    "Highlight cause and effect language.", "Ask “why” and “how” questions.", "Use consistent classroom language.",
-    "Support writing with frames.", "Encourage students to paraphrase.", "Use peer correction carefully.",
-    "Integrate micro-presentations.", "Use visuals to check understanding.", "Allow students to rehearse answers.",
-    "Encourage subject talk, not single words.", "Use bilingual support strategically.", "Highlight academic verbs.",
-    "Use real data when possible.", "Encourage reflective thinking.", "Use step-by-step explanations.",
-    "Reinforce language objectives explicitly.", "Connect tasks to learning goals.", "Use sentence expansion activities.",
-    "Encourage prediction before content.", "Use guiding posters in class.", "Promote respectful discussion.",
-    "Use short formative assessments.", "Encourage use of transition words.", "Make language visible in the classroom.",
-    "Use examples from students.", "Encourage self-correction.", "Use structured debates.",
-    "Provide wait time after questions.", "Use mini word walls.", "Encourage explanation over memorization.",
-    "Use learning objectives clearly.", "Connect language to thinking skills.", "Use reflection journals.",
-    "Encourage clarity over speed.", "Celebrate effort in language use.", "Use consistent scaffolding.",
-    "Always link language to content."
 ];
 
 const INITIAL_GOALS_2026 = [
@@ -82,9 +53,22 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
     const [sessionTip, setSessionTip] = useState("");
 
+    const [showTaskModal, setShowTaskModal] = useState(false);
+    const [editingTask, setEditingTask] = useState(null);
+    const [taskForm, setTaskForm] = useState({
+        Challenge_Description: "",
+        Days_Active: "normal",     // normal | urgente
+        Status: "pending",         // pending | in_progress | completed
+        Evidence_Note: "",
+        Start_Date: ""
+    });
+
+    const [isSyncingTask, setIsSyncingTask] = useState(false);
+
     const [excelData, setExcelData] = useState({});
     const [allTeachers, setAllTeachers] = useState([]);
     const [userActivities, setUserActivities] = useState([]);
+    const [allActivities, setAllActivities] = useState([]);
     const [userChallenges, setUserChallenges] = useState([]); 
     const [vocabularyData, setVocabularyData] = useState([]); 
     const [simpleVocabList, setSimpleVocabList] = useState([]); 
@@ -99,6 +83,26 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     const [syncTime, setSyncTime] = useState(0);
     const syncInterval = useRef(null);
+
+    const [confirmState, setConfirmState] = useState(null);
+    const [toast, setToast] = useState(null);
+
+    /* Confirmación con promesa (reemplaza window.confirm) */
+    const confirmDialog = ({ title, message, confirmText = "Confirmar", danger = false }) =>
+        new Promise(resolve => {
+            setConfirmState({ title, message, confirmText, danger, resolve });
+        });
+
+    const closeConfirm = (value) => {
+        if (confirmState?.resolve) confirmState.resolve(value);
+        setConfirmState(null);
+    };
+
+    /* Toast temporal */
+    const showToast = (message, type = "success") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3200);
+    };
 
     const [challengeForm, setChallengeForm] = useState({
         Challenge_Descriptions: ["", "", "", "", ""],
@@ -154,6 +158,8 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         }
         return () => clearInterval(syncInterval.current);
     }, [isLoading]);
+
+    
 
     const fetchAllSheets = async () => {
         setIsLoading(true);
@@ -226,7 +232,9 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         );
         setUserChallenges(allMyChallenges);
 
-        // Filtro Actividades
+        
+
+        setAllActivities(excelData.Activities_Calendar || []);
         const myActs = (excelData.Activities_Calendar || []).filter(a =>
             String(a.Responsable_ID || a.Responsable || "").trim().toUpperCase() === teacherName.toUpperCase()
         );
@@ -286,32 +294,70 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     // Función para agregar Recursos Talleres al primer reto activo
     const handleAddResource = async () => {
-        const activeChallenges = getActiveChallenges(userChallenges);
-        if (activeChallenges.length === 0) {
-            alert("No hay retos activos para vincular recursos.");
-            return;
-        }
-        const target = activeChallenges[0];
-        const currentResources = target.Bilingual_Resources ? target.Bilingual_Resources + "\n" : "";
-        const updatedResources = currentResources + resourceLink;
+        const link = resourceLink.trim();
+        if (!link) return;
 
-        setIsLoading(true);
+        const teacherIdentifier = userData.Teacher_Name || userData.name;
+        const rowId = `RES-${Date.now()}`;
+
+        const payload = {
+            ID_Challenge: rowId,
+            Teacher_Key: teacherIdentifier,
+            Challenge_Description: "",
+            Start_Date: "",
+            Days_Active: "",
+            Status: "resource",
+            Evidence_Note: "",
+            Bilingual_Resources: link
+        };
+
+        // Pinta al instante
+        setUserChallenges(prev => [...prev, payload]);
+        setResourceLink("");
+        setShowResourceModal(false);
+
         try {
             await fetch(API_URL, {
                 method: "POST",
                 body: JSON.stringify({
-                    action: "update",
+                    action: "create",
                     sheet: "Weekly_Challenges",
                     idField: "ID_Challenge",
-                    idValue: target.ID_Challenge,
-                    data: { Bilingual_Resources: updatedResources }
+                    idValue: null,
+                    data: payload
                 })
             });
-            setResourceLink("");
-            setShowResourceModal(false);
-            await fetchAllSheets();
         } catch (err) { console.error(err); }
-        setIsLoading(false);
+    };
+
+    const removeResource = async (resource) => {
+        const ok = await confirmDialog({
+            title: "Eliminar recurso",
+            message: "Este enlace se quitará de tu biblioteca.",
+            confirmText: "Eliminar",
+            danger: true
+        });
+        if (!ok) return;
+
+        const backup = userChallenges;
+        setUserChallenges(prev => prev.filter(c => c.ID_Challenge !== resource.ID_Challenge));
+        try {
+            const resp = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "delete",
+                    sheet: "Weekly_Challenges",
+                    idField: "ID_Challenge",
+                    idValue: resource.ID_Challenge
+                })
+            });
+            const result = await resp.json();
+            if (result.status !== 'success') throw new Error(result.message);
+        } catch (err) {
+            console.error(err);
+            setUserChallenges(backup);
+            showToast("No se pudo eliminar el recurso.", "error");
+        }
     };
 
     const handleChallengeSubmit = async (e) => {
@@ -349,6 +395,153 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         setIsLoading(false);
     };
 
+    /* ================= AGENDA DE TAREAS ================= */
+    const myTasks = [...userChallenges]
+        .filter(t => t.Challenge_Description && t.Status !== 'resource')
+        .sort((a, b) => {
+            const done = (x) => x.Status === 'completed' ? 1 : 0;
+            if (done(a) !== done(b)) return done(a) - done(b);
+            const urg = (x) => x.Days_Active === 'urgente' ? 0 : 1;
+            return urg(a) - urg(b);
+        });
+
+    const myResources = userChallenges.filter(c =>
+        c.Status === 'resource' && c.Bilingual_Resources
+    );
+
+    const pendingTasks = myTasks.filter(t => t.Status !== 'completed');
+
+    const openNewTask = () => {
+        setEditingTask(null);
+        setTaskForm({
+            Challenge_Description: "",
+            Days_Active: "normal",
+            Status: "pending",
+            Evidence_Note: "",
+            Start_Date: new Date().toISOString().split('T')[0]
+        });
+        setShowTaskModal(true);
+    };
+
+    const openEditTask = (task) => {
+        setEditingTask(task);
+        setTaskForm({
+            Challenge_Description: task.Challenge_Description || "",
+            Days_Active: task.Days_Active || "normal",
+            Status: task.Status || "pending",
+            Evidence_Note: task.Evidence_Note || "",
+            Start_Date: task.Start_Date || new Date().toISOString().split('T')[0]
+        });
+        setShowTaskModal(true);
+    };
+
+    const handleTaskSubmit = async (e) => {
+        e.preventDefault();
+        if (!taskForm.Challenge_Description.trim()) return;
+
+        const teacherIdentifier = userData.Teacher_Name || userData.name;
+        const existingId = editingTask ? editingTask.ID_Challenge : null;
+        const id = existingId || `TK-${Date.now()}`;
+
+        const payload = {
+            ID_Challenge: id,
+            Teacher_Key: teacherIdentifier,
+            Challenge_Description: taskForm.Challenge_Description.trim(),
+            Start_Date: taskForm.Start_Date,
+            Days_Active: taskForm.Days_Active,
+            Status: taskForm.Status,
+            Evidence_Note: taskForm.Evidence_Note
+        };
+
+        // 1) Pintar YA en pantalla y cerrar el modal
+        setUserChallenges(prev => existingId
+            ? prev.map(t => t.ID_Challenge === id ? { ...t, ...payload } : t)
+            : [...prev, { ...payload, _pending: true }]
+        );
+        setShowTaskModal(false);
+        setEditingTask(null);
+
+        // 2) Sincronizar en segundo plano
+        setIsSyncingTask(true);
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: existingId ? "update" : "create",
+                    sheet: "Weekly_Challenges",
+                    idField: "ID_Challenge",
+                    idValue: existingId,
+                    data: payload
+                })
+            });
+            // Marca como sincronizada
+            setUserChallenges(prev => prev.map(t =>
+                t.ID_Challenge === id ? { ...t, _pending: false } : t
+            ));
+        } catch (err) {
+            console.error("Error guardando tarea:", err);
+            setUserChallenges(prev => prev.map(t =>
+                t.ID_Challenge === id ? { ...t, _error: true, _pending: false } : t
+            ));
+        }
+        setIsSyncingTask(false);
+    };
+
+    const cycleTaskStatus = async (task) => {
+        const order = ['pending', 'in_progress', 'completed'];
+        const current = task.Status || 'pending';
+        const newStatus = order[(order.indexOf(current) + 1) % order.length];
+        setUserChallenges(prev => prev.map(c =>
+            c.ID_Challenge === task.ID_Challenge ? { ...c, Status: newStatus } : c
+        ));
+        setIsSyncingTask(true);
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "update",
+                    sheet: "Weekly_Challenges",
+                    idField: "ID_Challenge",
+                    idValue: task.ID_Challenge,
+                    data: { Status: newStatus }
+                })
+            });
+        } catch (err) { console.error(err); }
+        setIsSyncingTask(false);
+    };
+
+    const deleteTask = async (task) => {
+        const ok = await confirmDialog({
+            title: "Eliminar tarea",
+            message: `"${task.Challenge_Description}" se eliminará de tu agenda.`,
+            confirmText: "Eliminar",
+            danger: true
+        });
+        if (!ok) return;
+
+        const backup = userChallenges;
+        setUserChallenges(prev => prev.filter(c => c.ID_Challenge !== task.ID_Challenge));
+        setIsSyncingTask(true);
+        try {
+            const resp = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "delete",
+                    sheet: "Weekly_Challenges",
+                    idField: "ID_Challenge",
+                    idValue: task.ID_Challenge
+                })
+            });
+            const result = await resp.json();
+            if (result.status !== 'success') throw new Error(result.message);
+        } catch (err) {
+            console.error("Error eliminando:", err);
+            setUserChallenges(backup);   // revierte si falla
+            showToast("No se pudo eliminar. Intenta de nuevo.", "error");
+        }
+        setIsSyncingTask(false);
+    };
+
     const toggleChallengeStatus = async (challenge) => {
         const newStatus = challenge.Status === "completed" ? "non completed" : "completed";
         const updatedChallenges = userChallenges.map(c => c.ID_Challenge === challenge.ID_Challenge ? { ...c, Status: newStatus } : c);
@@ -374,142 +567,247 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const renderContent = () => {
         switch (activeTab) {
             case "profile":
+                const activeChallenges = getActiveChallenges(userChallenges);
                 return (
-                    <div className="content-grid">
-                        <div className="info-card score-card">
-                            <h3>Performance Score</h3>
-                            <div className="score-main">
-                                <span className="score-val">{averageScore}</span>
-                                <span className="score-max">/ 100</span>
+                    <div className="profile-layout">
+
+                        {/* ===== LUMI a ancho completo ===== */}
+                        <LumiCard
+                            userData={userData}
+                            stats={{
+                                pendingTasks: pendingTasks.length,
+                                totalTasks: myTasks.length,
+                                urgentTasks: myTasks.filter(t => t.Days_Active === 'urgente' && t.Status !== 'completed').length,
+                                unassignedActivities: allActivities.filter(a =>
+                                    !String(a.Responsable_ID || a.Responsable || "").trim()
+                                ).length,
+                                myActivities: userActivities.length,
+                                resources: myResources.length,
+                            }}
+                        />
+
+                        {/* ===== Fila de métricas ===== */}
+                        <div className="metrics-row">
+                            <div className="metric-card primary">
+                                <div className="metric-icon"><Target size={20} strokeWidth={2} /></div>
+                                <div className="metric-body">
+                                    <span className="metric-label">Performance Score</span>
+                                    <div className="metric-value">
+                                        <strong>{averageScore}</strong>
+                                        <em>/ 100</em>
+                                    </div>
+                                    <span className="metric-desc">Classroom Observations</span>
+                                </div>
                             </div>
-                            <p className="score-desc">Classroom Observations Average</p>
+
+                            <div className="metric-card">
+                                <div className="metric-icon"><ClipboardList size={20} strokeWidth={2} /></div>
+                                <div className="metric-body">
+                                    <span className="metric-label">Actividades</span>
+                                    <div className="metric-value"><strong>{userActivities.length}</strong></div>
+                                    <span className="metric-desc">asignadas a ti</span>
+                                </div>
+                            </div>
+
+                            <div className="metric-card">
+                                <div className="metric-icon"><ClipboardList size={20} strokeWidth={2} /></div>
+                                <div className="metric-body">
+                                    <span className="metric-label">Tareas pendientes</span>
+                                    <div className="metric-value"><strong>{pendingTasks.length}</strong></div>
+                                    <span className="metric-desc">de {myTasks.length} en tu agenda</span>
+                                </div>
+                            </div>
+
+                            <div className="metric-card">
+                                <div className="metric-icon"><BookOpen size={20} strokeWidth={2} /></div>
+                                <div className="metric-body">
+                                    <span className="metric-label">Vocabulario</span>
+                                    <div className="metric-value"><strong>{simpleVocabList.length}</strong></div>
+                                    <span className="metric-desc">palabras registradas</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="info-card status-card">
-                            <h3>Bilingual Status</h3>
-                            <p style={{textAlign: 'left', marginBottom: '10px'}}><strong>Role:</strong> {userData.ROL}</p>
-                            <div className="clil-tip-container">
-                                <div className="clil-tip-header"><span>💡</span> CLIL Tip of the Day</div>
-                                <p className="clil-tip-text">"{sessionTip}"</p>
-                            </div>
-                        </div>
+                        {/* ===== Panel principal: dos columnas ===== */}
+                        <div className="panel-grid">
 
-                        <div className="info-card">
-                            <h3>My Responsibilities</h3>
-                            <div className="mini-activity-list">
-                                {userActivities.length > 0 ? userActivities.slice(0, 3).map((act, i) => {
-                                    const status = getSemaforoLogic(act);
-                                    const startDate = act.Start ? new Date(act.Start).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : "---";
-                                    const deadlineDate = act.Deadline ? new Date(act.Deadline).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : "No Date";
-                                    return (
-                                        <div key={i} className="mini-act-row" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '10px' }}>
-                                            <div className="act-info" style={{ flex: 1 }}>
-                                                <strong style={{ fontSize: '0.9rem', color: 'var(--dash-text)' }}>{act.Event_Name || "Activity"}</strong>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>🛫 Start:</span>
-                                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', color: '#64748b' }}>{startDate}</span>
-                                                    </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>🏁 Deadline:</span>
-                                                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#ab0505' }}>{deadlineDate}</span>
+                            {/* Responsabilidades */}
+                            <section className="panel">
+                                <div className="panel-head">
+                                    <h3><ClipboardList size={16} strokeWidth={2.2} /> Mis responsabilidades</h3>
+                                    <button className="panel-action" onClick={() => setActiveTab("activities")}>
+                                        Ver todas <ArrowRight size={14} strokeWidth={2.4} />
+                                    </button>
+                                </div>
+                                <div className="panel-body">
+                                    {userActivities.length > 0 ? userActivities.slice(0, 3).map((act, i) => {
+                                        const status = getSemaforoLogic(act);
+                                        const startDate = act.Start ? new Date(act.Start).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : "—";
+                                        const deadlineDate = act.Deadline ? new Date(act.Deadline).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : "Sin fecha";
+                                        return (
+                                            <div key={i} className="task-row">
+                                                <span className="task-dot" style={{ background: status.color }} />
+                                                <div className="task-info">
+                                                    <strong>{act.Event_Name || "Actividad"}</strong>
+                                                    <div className="task-meta">
+                                                        <span>{startDate} → {deadlineDate}</span>
+                                                        <span className="task-status" style={{ color: status.color }}>{status.label}</span>
                                                     </div>
                                                 </div>
-                                                <span className="semaforo-status" style={{ color: status.color, fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>● {status.label}</span>
                                             </div>
+                                        );
+                                    }) : <p className="panel-empty">No tienes actividades asignadas.</p>}
+                                </div>
+                            </section>
+
+                            {/* Retos */}
+                            <section className="panel">
+                               <div className="panel-head">
+                                    <h3>
+                                        <ClipboardList size={16} strokeWidth={2.2} /> Mi agenda
+                                        {isSyncingTask && <span className="agenda-sync"><RefreshCw size={12} strokeWidth={2.5} /> guardando</span>}
+                                    </h3>
+                                    <button className="panel-action" onClick={openNewTask}>
+                                        Nueva tarea <Plus size={14} strokeWidth={2.4} />
+                                    </button>
+                                </div>
+                                <div className="panel-body">
+                                    {myTasks.length > 0 ? (
+                                        <div className="agenda-list">
+                                            {myTasks.map((task, i) => (
+                                                <div key={task.ID_Challenge || i} className={`agenda-item ${task.Status === 'completed' ? 'done' : ''} ${task.Days_Active === 'urgente' ? 'urgent' : ''} ${task._pending ? 'syncing' : ''} ${task._error ? 'failed' : ''}`}>
+                                                    <button
+                                                        className={`agenda-check ${task.Status || 'pending'}`}
+                                                        onClick={() => cycleTaskStatus(task)}
+                                                        title="Cambiar estado"
+                                                    >
+                                                        {task.Status === 'completed' && <Check size={13} strokeWidth={3} />}
+                                                        {task.Status === 'in_progress' && <span className="agenda-half" />}
+                                                        {(!task.Status || task.Status === 'pending') && <Circle size={13} strokeWidth={2} />}
+                                                    </button>
+
+                                                    <div className="agenda-body" onClick={() => openEditTask(task)}>
+                                                        <div className="agenda-top">
+                                                            <span className="agenda-text">{task.Challenge_Description}</span>
+                                                            {task.Days_Active === 'urgente' && <span className="agenda-flag">Urgente</span>}
+                                                        </div>
+                                                        {task.Evidence_Note && <p className="agenda-note">{task.Evidence_Note}</p>}
+                                                        {task.Start_Date && (
+                                                            <span className="agenda-date">
+                                                                <CalendarDays size={11} strokeWidth={2.2} />
+                                                                {new Date(task.Start_Date).toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <button className="agenda-del" onClick={() => deleteTask(task)} title="Eliminar">×</button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )
-                                }) : <p className="empty-msg">No activities found.</p>}
-                            </div>
-                            <button className="btn-link" onClick={() => setActiveTab("activities")}>Fill Forms →</button>
-                        </div>
+                                    ) : (
+                                        <p className="panel-empty">Tu agenda está vacía. Crea tu primera tarea.</p>
+                                    )}
+                                </div>
+                            </section>
 
-                        <div className="info-card">
-                            <h3>Period Challenges</h3>
-                            <div className="mini-activity-list">
-                                {getActiveChallenges(userChallenges).length > 0 ? getActiveChallenges(userChallenges).map((ch, i) => (
-                                    <div key={i} className="mini-act-row">
-                                        <div className="act-info">
-                                            <strong style={{textDecoration: ch.Status === 'completed' ? 'line-through' : 'none', fontSize: '0.85rem', color: ch.Status === 'completed' ? '#999' : 'inherit'}}>{ch.Challenge_Description}</strong>
+                            {/* Vocabulario */}
+                            <section className="panel">
+                                <div className="panel-head">
+                                    <h3><BookOpen size={16} strokeWidth={2.2} /> Vocabulary Big 5</h3>
+                                    <button className="panel-action" onClick={() => setShowVocabModal(true)}>
+                                        Ver todo <ArrowRight size={14} strokeWidth={2.4} />
+                                    </button>
+                                </div>
+                                <div className="panel-body">
+                                    {simpleVocabList.length > 0 ? (
+                                        <div className="vocab-chips">
+                                            {simpleVocabList.slice(-8).map((v, i) => (
+                                                <span key={i} className="vocab-chip">{v}</span>
+                                            ))}
                                         </div>
-                                        <button className={`check-status-btn ${ch.Status === 'completed' ? 'completed' : ''}`} onClick={() => toggleChallengeStatus(ch)} style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem'}}>{ch.Status === 'completed' ? '✅' : '⭕'}</button>
-                                    </div>
-                                )) : <p className="empty-msg">No active challenges (15-day cycle).</p>}
-                            </div>
-                            <button className="btn-link" onClick={openChallengeModal}>{getActiveChallenges(userChallenges).length > 0 ? "✎ Edit Challenges" : "+ Log 5 Challenges"}</button>
-                        </div>
+                                    ) : <p className="panel-empty">Sin vocabulario registrado.</p>}
+                                </div>
+                            </section>
 
-                        <div className="info-card">
-                            <h3>Recursos Talleres</h3>
-                            <div className="mini-activity-list" style={{maxHeight: '120px', overflowY: 'auto'}}>
-                                {getActiveChallenges(userChallenges).length > 0 ? (
-                                    getActiveChallenges(userChallenges)[0].Bilingual_Resources?.split('\n').filter(link => link.trim() !== "").map((link, idx) => (
-                                        <div key={idx} style={{marginBottom: '5px'}}>
-                                            <a href={link} target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'underline', wordBreak: 'break-all'}}>🔗 Recurso {idx + 1}</a>
+                            {/* Recursos */}
+                            <section className="panel">
+                                <div className="panel-head">
+                                    <h3><Link2 size={16} strokeWidth={2.2} /> Mis recursos</h3>
+                                    <button className="panel-action" onClick={() => setShowResourceModal(true)}>
+                                        Agregar <Plus size={14} strokeWidth={2.4} />
+                                    </button>
+                                </div>
+                                <div className="panel-body">
+                                    {myResources.length > 0 ? (
+                                        <div className="res-list">
+                                            {myResources.map((res, idx) => {
+                                                const link = res.Bilingual_Resources;
+                                                let host = link;
+                                                try { host = new URL(link).hostname.replace('www.', ''); } catch {}
+                                                return (
+                                                    <div key={res.ID_Challenge || idx} className="res-item">
+                                                        <a href={link} target="_blank" rel="noreferrer" className="res-link">
+                                                            <span className="res-favicon">
+                                                                <Link2 size={13} strokeWidth={2.4} />
+                                                            </span>
+                                                            <span className="res-host">{host}</span>
+                                                        </a>
+                                                        <button className="res-del" onClick={() => removeResource(res)} title="Eliminar">×</button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    ))
-                                ) : <p className="empty-msg">No hay recursos vinculados.</p>}
-                            </div>
-                            <button className="btn-link" onClick={() => setShowResourceModal(true)}>+ Agregar Recurso</button>
-                        </div>
+                                    ) : (
+                                        <p className="panel-empty">Guarda aquí los enlaces que usas siempre.</p>
+                                    )}
+                                </div>
+                            </section>
 
-                        <div className="info-card">
-                            <h3>Vocabulary Big 5</h3>
-                            <div className="vocab-cloud" style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
-                                {simpleVocabList.length > 0 ? simpleVocabList.slice(-7).map((v, i, arr) => (
-                                    <span key={i} className="tag-v" style={{ fontSize: '0.9rem', color: 'var(--dash-text)' }}>{v}{i < arr.length - 1 ? "," : ""}</span>
-                                )) : <p className="empty-msg">No vocabulary found.</p>}
-                            </div>
-                            <button className="btn-link" onClick={() => setShowVocabModal(true)}>View All</button>
-                        </div>
-
-                        <div className="info-card">
-                            <h3>Bilingual Tools</h3>
-                            <div className="tool-links-grid">
-                                <a href="https://taupe-sprinkles-8a613b.netlify.app/" target="_blank" rel="noreferrer" className="tool-box">📊 My DOFA</a>
-                                <a href="https://playful-moxie-a7b0d0.netlify.app/" target="_blank" rel="noreferrer" className="tool-box">📈 Proficiency</a>
-                                <a href="https://docs.google.com/document/d/1gg2fdgI7m43YX3uhzhTRzu1ObnKTYJsS/edit" target="_blank" rel="noreferrer" className="tool-box">📄 Actas</a>
-                                <a href="https://docs.google.com/document/d/1s7epMFvfhjV_3-_fGXapZ03o8iCtHJct/edit?usp=sharing&ouid=116456846522794306523&rtpof=true&sd=true" target="_blank" rel="noreferrer" className="tool-box">📄 Area plan English and Clil</a>
-                            </div>
-                        </div>
-
-                        <div className="info-card wide-card">
-                            <h3>Expected Proficiency Goals</h3>
-                            <div className="goals-container-modern">
-                                <div className="goal-block"><strong>Elementary:</strong><p>1°-2°: A1 | 3°-5°: A2</p></div>
-                                <div className="goal-block"><strong>High School:</strong><p>6°-8°: B1 | 9°-11°: B2</p></div>
-                            </div>
-                        </div>
-
-                        <div className="info-card wide-card">
-                            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px'}}>
-                                <h3>🚀 Roadmap: Certificación 2026</h3>
-                                <span style={{fontSize:'0.75rem', fontWeight:'bold', color:'white', background:'#ab0505', padding:'5px 12px', borderRadius:'15px'}}>{goals2026.filter(g => g.completed).length} / 15 Logradas</span>
-                            </div>
-                            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px'}}>
-                                <div>
-                                    <p style={{fontSize:'0.7rem', fontWeight:'bold', color:'#64748b', textTransform:'uppercase', marginBottom:'8px'}}>Por Cumplir</p>
-                                    <div className="batch-scroll-area" style={{maxHeight:'220px', margin:0, background:'#f8fafc', padding:'10px', borderRadius:'10px'}}>
-                                        {goals2026.filter(g => !g.completed).map(goal => (
-                                            <div key={goal.id} className="mini-act-row" style={{background:'white', border:'1px solid #e2e8f0', marginBottom:'8px', padding:'10px'}}>
-                                                <span style={{fontSize:'0.85rem', flex:1, lineHeight:'1.2'}}>{goal.text}</span>
-                                                <button onClick={() => toggleGoal(goal.id)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem'}}>⭕</button>
-                                            </div>
-                                        ))}
+                            {/* Herramientas — ancho completo */}
+                           <section className="panel wide">
+                                <div className="panel-head">
+                                    <h3><Wrench size={16} strokeWidth={2.2} /> Herramientas</h3>
+                                </div>
+                                <div className="panel-body">
+                                    <div className="tools-grid">
+                                        <a href="https://taupe-sprinkles-8a613b.netlify.app/" target="_blank" rel="noreferrer" className="tool-card">
+                                            <span className="tool-icon dofa"><Target size={22} strokeWidth={2} /></span>
+                                            <strong>My DOFA</strong>
+                                        </a>
+                                        <a href="https://drive.google.com/drive/folders/1Q6RLxnkbYsU4JdYXx32GErmVLsF6QJ1x?usp=sharing" target="_blank" rel="noreferrer" className="tool-card">
+                                            <span className="tool-icon maps"><GraduationCap size={22} strokeWidth={2} /></span>
+                                            <strong>Curriculum Maps</strong>
+                                        </a>
+                                        <a href="https://docs.google.com/document/d/1gg2fdgI7m43YX3uhzhTRzu1ObnKTYJsS/edit" target="_blank" rel="noreferrer" className="tool-card">
+                                            <span className="tool-icon actas"><ClipboardList size={22} strokeWidth={2} /></span>
+                                            <strong>Actas</strong>
+                                        </a>
+                                        <a href="https://drive.google.com/drive/folders/1KWU4jClPFqUIA6nuOizHMMW1AVt7S__l?usp=drive_link" target="_blank" rel="noreferrer" className="tool-card">
+                                            <span className="tool-icon plan"><BookOpen size={22} strokeWidth={2} /></span>
+                                            <strong>Area Plan</strong>
+                                        </a>
                                     </div>
                                 </div>
-                                <div>
-                                    <p style={{fontSize:'0.7rem', fontWeight:'bold', color:'#10b981', textTransform:'uppercase', marginBottom:'8px'}}>Logros Alcanzados</p>
-                                    <div className="batch-scroll-area" style={{maxHeight:'220px', margin:0, background:'#f0fdf4', padding:'10px', borderRadius:'10px'}}>
-                                        {goals2026.filter(g => g.completed).length > 0 ? goals2026.filter(g => g.completed).map(goal => (
-                                            <div key={goal.id} className="mini-act-row" style={{background:'white', border:'1px solid #bbf7d0', marginBottom:'8px', padding:'10px'}}>
-                                                <span style={{fontSize:'0.85rem', flex:1, color:'#16a34a', textDecoration:'line-through'}}>{goal.text}</span>
-                                                <button onClick={() => toggleGoal(goal.id)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.1rem'}}>✅</button>
-                                            </div>
-                                        )) : <p style={{fontSize:'0.8rem', color:'#94a3b8', textAlign:'center', marginTop:'20px'}}>Aún no hay metas marcadas como logradas.</p>}
+                            </section>
+
+                            {/* Metas — ancho completo */}
+                            <section className="panel wide">
+                                <div className="panel-head">
+                                    <h3><GraduationCap size={16} strokeWidth={2.2} /> Metas de proficiencia</h3>
+                                </div>
+                                <div className="panel-body">
+                                    <div className="goals-grid">
+                                        <div className="goal-item">
+                                            <span className="goal-tag">Elementary</span>
+                                            <p><strong>1°-2°</strong> A1 · <strong>3°-5°</strong> A2</p>
+                                        </div>
+                                        <div className="goal-item">
+                                            <span className="goal-tag">High School</span>
+                                            <p><strong>6°-8°</strong> B1 · <strong>9°-11°</strong> B2</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
                     </div>
                 );
@@ -529,34 +827,83 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
             {isMobileMenuOpen && <div className="sidebar-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
-            <aside className={`sidebar ${isMobileMenuOpen ? "open" : ""}`}>
-                <div className="sidebar-profile">
-                    <div className="avatar-circle">{userData.Teacher_Name?.charAt(0)}</div>
-                    <h3>{userData.Teacher_Name}</h3>
-                    <p className="role-badge">{userData.ROL}</p>
+            <aside className={`lumi-sidebar ${isMobileMenuOpen ? "open" : ""}`}>
+                <div className="ls-brand">
+                    <div className="ls-avatar">{userData.Teacher_Name?.charAt(0)}</div>
+                    <div className="ls-brand-text">
+                        <strong>{userData.Teacher_Name}</strong>
+                        <span>{userData.ROL}</span>
+                    </div>
                 </div>
-                <nav className="sidebar-menu">
-                    <button className={activeTab === "profile" ? "active" : ""} onClick={() => { setActiveTab("profile"); setIsMobileMenuOpen(false); }}>👤 Profile</button>
-                    <button className={activeTab === "planning" ? "active" : ""} onClick={() => { setActiveTab("planning"); setIsMobileMenuOpen(false); }}>📝 Planning</button>
-                    <button className={activeTab === "activities" ? "active" : ""} onClick={() => { setActiveTab("activities"); setIsMobileMenuOpen(false); }}>📅 Activities</button>
+
+                <nav className="ls-nav">
+                    <button
+                        className={`ls-item ${activeTab === "profile" ? "on" : ""}`}
+                        onClick={() => { setActiveTab("profile"); setIsMobileMenuOpen(false); }}
+                    >
+                        <span className="ls-item-glow" />
+                        <LayoutDashboard className="ls-icon" size={19} strokeWidth={2} />
+                        <span className="ls-label">Profile</span>
+                        <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                    </button>
+
+                    <button
+                        className={`ls-item ${activeTab === "planning" ? "on" : ""}`}
+                        onClick={() => { setActiveTab("planning"); setIsMobileMenuOpen(false); }}
+                    >
+                        <span className="ls-item-glow" />
+                        <NotebookPen className="ls-icon" size={19} strokeWidth={2} />
+                        <span className="ls-label">Planning</span>
+                        <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                    </button>
+
+                    <button
+                        className={`ls-item ${activeTab === "activities" ? "on" : ""}`}
+                        onClick={() => { setActiveTab("activities"); setIsMobileMenuOpen(false); }}
+                    >
+                        <span className="ls-item-glow" />
+                        <CalendarDays className="ls-icon" size={19} strokeWidth={2} />
+                        <span className="ls-label">Activities</span>
+                        <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                    </button>
+
                     {userData.ROL === "Admin" && (
-                        <button className={activeTab === "revision" ? "active" : ""} onClick={() => { setActiveTab("revision"); setIsMobileMenuOpen(false); }}>🔍 Review</button>
+                        <button
+                            className={`ls-item ${activeTab === "revision" ? "on" : ""}`}
+                            onClick={() => { setActiveTab("revision"); setIsMobileMenuOpen(false); }}
+                        >
+                            <span className="ls-item-glow" />
+                            <Search className="ls-icon" size={19} strokeWidth={2} />
+                            <span className="ls-label">Review</span>
+                            <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                        </button>
                     )}
-                    <button className="logout-btn-side" onClick={() => { handleLogoutAction(); setIsMobileMenuOpen(false); }} style={{marginTop: 'auto'}}>🚪 Logout</button>
+
+                    <button
+                        className="ls-item logout"
+                        onClick={() => { handleLogoutAction(); setIsMobileMenuOpen(false); }}
+                    >
+                        <LogOut className="ls-icon" size={19} strokeWidth={2} />
+                        <span className="ls-label">Logout</span>
+                    </button>
                 </nav>
             </aside>
 
             <main className="main-content">
-                <header className="main-header">
-                    <div className="header-left">
-                        <h2>{activeTab.toUpperCase()}</h2>
-                        <div className="sync-container" style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-                            <p className={`sync-status ${isLoading ? 'loading' : ''}`}>
-                                {isLoading ? `⏳ Sincronizando: ${syncTime.toFixed(1)}s` : "✅ Cloud Updated"}
-                            </p>
-                            <button onClick={fetchAllSheets} disabled={isLoading} className="sync-refresh-btn" title="Sync All Tables">🔄</button>
-                        </div>
+                <header className="dash-header">
+                    <div className="dh-title">
+                        <span className="dh-eyebrow">Bilingual Management</span>
+                        <h2>{activeTab === 'profile' ? 'Mi espacio' : activeTab.toUpperCase()}</h2>
                     </div>
+                    <button
+                        onClick={fetchAllSheets}
+                        disabled={isLoading}
+                        className={`dh-sync ${isLoading ? 'loading' : ''}`}
+                        title="Sincronizar"
+                    >
+                        <RefreshCw size={15} strokeWidth={2.4} className="dh-sync-icon" />
+                        <span>{isLoading ? `Sincronizando ${syncTime.toFixed(1)}s` : 'Actualizado'}</span>
+                    </button>
                 </header>
                 <section className="dynamic-section">{renderContent()}</section>
             </main>
@@ -564,15 +911,36 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
             {/* Modal para Recursos Talleres */}
             {showResourceModal && (
                 <div className="modal-overlay" onClick={() => setShowResourceModal(false)}>
-                    <div className="batch-challenge-window" onClick={e => e.stopPropagation()} style={{maxWidth: '400px'}}>
-                        <div className="batch-header">
-                            <h2>➕ Agregar Recurso</h2>
-                            <button className="batch-close" onClick={() => setShowResourceModal(false)}>×</button>
+                    <div className="task-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+                        <div className="tm-head">
+                            <div>
+                                <span className="tm-eyebrow">Nuevo recurso</span>
+                                <h3>Mis recursos</h3>
+                            </div>
+                            <button className="tm-close" onClick={() => setShowResourceModal(false)}>×</button>
                         </div>
-                        <div style={{padding: '20px'}}>
-                            <label style={{fontSize: '0.8rem', fontWeight: 'bold'}}>Link del Recurso:</label>
-                            <input type="url" className="batch-input" value={resourceLink} onChange={e => setResourceLink(e.target.value)} placeholder="https://..." style={{width: '100%', marginTop: '10px'}} />
-                            <button className="batch-submit-btn" style={{marginTop: '20px'}} onClick={handleAddResource}>Guardar en Reto</button>
+
+                        <div className="tm-body">
+                            <div className="tm-field">
+                                <label>Enlace del recurso</label>
+                                <input
+                                    type="url"
+                                    className="res-input"
+                                    value={resourceLink}
+                                    onChange={e => setResourceLink(e.target.value)}
+                                    placeholder="https://..."
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAddResource(); }}
+                                    autoFocus
+                                />
+                                <p className="res-hint">Pega la dirección completa. Se guardará en tu biblioteca personal.</p>
+                            </div>
+                        </div>
+
+                        <div className="tm-foot">
+                            <button className="tm-btn ghost" onClick={() => setShowResourceModal(false)}>Cancelar</button>
+                            <button className="tm-btn primary" onClick={handleAddResource} disabled={!resourceLink.trim()}>
+                                Guardar recurso
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -629,6 +997,111 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             ))}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {showTaskModal && (
+                <div className="modal-overlay" onClick={() => setShowTaskModal(false)}>
+                    <form className="task-modal" onClick={e => e.stopPropagation()} onSubmit={handleTaskSubmit}>
+                        <div className="tm-head">
+                            <div>
+                                <span className="tm-eyebrow">{editingTask ? 'Editar tarea' : 'Nueva tarea'}</span>
+                                <h3>Mi agenda</h3>
+                            </div>
+                            <button type="button" className="tm-close" onClick={() => setShowTaskModal(false)}>×</button>
+                        </div>
+
+                        <div className="tm-body">
+                            <div className="tm-field">
+                                <label>¿Qué necesitas hacer?</label>
+                                <textarea
+                                    rows={3}
+                                    required
+                                    placeholder="Ej: Revisar planeaciones de 5° antes del viernes"
+                                    value={taskForm.Challenge_Description}
+                                    onChange={e => setTaskForm(f => ({ ...f, Challenge_Description: e.target.value }))}
+                                />
+                            </div>
+
+                            <div className="tm-row">
+                                <div className="tm-field">
+                                    <label>Prioridad</label>
+                                    <div className="tm-chips">
+                                        <button type="button" className={`tm-chip prio-normal ${taskForm.Days_Active === 'normal' ? 'on' : ''}`}
+                                            onClick={() => setTaskForm(f => ({ ...f, Days_Active: 'normal' }))}>Normal</button>
+                                        <button type="button" className={`tm-chip prio-urgente ${taskForm.Days_Active === 'urgente' ? 'on' : ''}`}
+                                            onClick={() => setTaskForm(f => ({ ...f, Days_Active: 'urgente' }))}>Urgente</button>
+                                    </div>
+                                </div>
+
+                                <div className="tm-field">
+                                    <label>Fecha</label>
+                                    <input
+                                        type="date"
+                                        value={taskForm.Start_Date}
+                                        onChange={e => setTaskForm(f => ({ ...f, Start_Date: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="tm-field">
+                                <label>Estado</label>
+                                <div className="tm-chips">
+                                    <button type="button" className={`tm-chip st-pending ${taskForm.Status === 'pending' ? 'on' : ''}`}
+                                        onClick={() => setTaskForm(f => ({ ...f, Status: 'pending' }))}>Pendiente</button>
+                                    <button type="button" className={`tm-chip st-in_progress ${taskForm.Status === 'in_progress' ? 'on' : ''}`}
+                                        onClick={() => setTaskForm(f => ({ ...f, Status: 'in_progress' }))}>En proceso</button>
+                                    <button type="button" className={`tm-chip st-completed ${taskForm.Status === 'completed' ? 'on' : ''}`}
+                                        onClick={() => setTaskForm(f => ({ ...f, Status: 'completed' }))}>Completada</button>
+                                </div>
+                            </div>
+
+                            <div className="tm-field">
+                                <label>Notas <em>(opcional)</em></label>
+                                <textarea
+                                    rows={2}
+                                    placeholder="Detalles, enlaces, recordatorios…"
+                                    value={taskForm.Evidence_Note}
+                                    onChange={e => setTaskForm(f => ({ ...f, Evidence_Note: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="tm-foot">
+                            <button type="button" className="tm-btn ghost" onClick={() => setShowTaskModal(false)}>Cancelar</button>
+                            <button type="submit" className="tm-btn primary">
+                                {editingTask ? 'Guardar cambios' : 'Crear tarea'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* ---------- Diálogo de confirmación ---------- */}
+            {confirmState && (
+                <div className="modal-overlay" onClick={() => closeConfirm(false)}>
+                    <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+                        <div className={`cd-icon ${confirmState.danger ? 'danger' : ''}`}>
+                            {confirmState.danger ? '⚠' : '?'}
+                        </div>
+                        <h3>{confirmState.title}</h3>
+                        <p>{confirmState.message}</p>
+                        <div className="cd-actions">
+                            <button className="tm-btn ghost" onClick={() => closeConfirm(false)}>Cancelar</button>
+                            <button
+                                className={`tm-btn ${confirmState.danger ? 'danger' : 'primary'}`}
+                                onClick={() => closeConfirm(true)}
+                            >{confirmState.confirmText}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ---------- Toast ---------- */}
+            {toast && (
+                <div className={`lumi-toast ${toast.type}`}>
+                    <span className="toast-dot" />
+                    {toast.message}
                 </div>
             )}
         </div>
