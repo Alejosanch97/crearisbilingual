@@ -56,16 +56,15 @@ const PROMPT_BANK = [
         ],
     },
     {
-        id: 'general_lesson_en_2',
-        label: '📓 Structured Textbook & Unit Plan (English Response)',
+        id: 'prime_math_plan',
+        label: '📐 PR1ME Math Plan (Currículo PR1ME)',
         lang: 'en',
+        primeMath: true, // ← marca especial: activa el flujo con JSON de PR1ME Math
         template:
-            'Design a highly structured lesson plan built around the following curriculum markers. Main topic: "{topic}". Specific book references, pages, or guidelines to follow: {bookRef}. Content examples and constraints: {extraContext}. Expected learning outcome: {goal}. Ensure instructions are clear, scaffolded, and directly measurable.',
+            'Act as an expert PR1ME Mathematics curriculum designer for a bilingual Colombian school. Design a step-by-step lesson plan STRICTLY anchored to the PR1ME Mathematics program. Chapter: "{chapterTitle}". Unit: "{unitTitle}". Selected sub-topics to teach: {selectedTopics}. Official PR1ME learning objectives for these sub-topics: {primeObjectives}. Pedagogical stages present (C-P-A): {primeStages}. Key concepts / materials from the guide: {primeConcepts}. Teacher\'s own learning goal for the session: {goal}. Respect the PR1ME lesson structure (Let\'s Remember → EXPLORE → Let\'s Learn C-P-A → Let\'s Do → Let\'s Practice → Mind Stretcher) and the Concrete → Pictorial → Abstract progression where applicable.',
         fields: [
-            { key: 'topic', label: 'Lesson Topic', type: 'text', placeholder: 'Ex: Wishes and conditionals' },
-            { key: 'bookRef', label: 'Textbook Unit or Page References', type: 'text', placeholder: 'Ex: Page 64, Unit 5 grammar section' },
-            { key: 'extraContext', label: 'Specific grammar rules, examples, or exercise numbers', type: 'textarea', placeholder: 'Ex: "I wish / if only", second conditional, textbook exercises 1-5...' },
-            { key: 'goal', label: 'Target Learning Goal', type: 'text', placeholder: 'Ex: students express personal wishes and future expectations fluently' },
+            // Este campo lo escribe el profe manualmente (su meta real)
+            { key: 'goal', label: 'Tu objetivo de aprendizaje para la sesión', type: 'text', placeholder: 'Ej: Que los estudiantes sumen sin reagrupar usando bloques base 10' },
         ],
     },
     {
@@ -565,6 +564,16 @@ export const PlanningCLIL = ({ userData }) => {
     const [curriculumMaps, setCurriculumMaps] = useState([]);
     const [syllabusTemplates, setSyllabusTemplates] = useState([]);
     const [loadingCurriculum, setLoadingCurriculum] = useState(false);
+    const [primeMathMaps, setPrimeMathMaps] = useState([]);
+
+
+    /* ---------- Estado del selector PR1ME Math ---------- */
+    const [primeData, setPrimeData] = useState(null);        // JSON parseado del grado+term
+    const [primeChapterIdx, setPrimeChapterIdx] = useState(''); // índice del capítulo elegido
+    const [primeUnitIdx, setPrimeUnitIdx] = useState('');       // índice de la unidad elegida
+    const [primeSelectedSubs, setPrimeSelectedSubs] = useState([]); // ids de subunidades elegidas
+    const [primeError, setPrimeError] = useState('');
+    const [primeParts, setPrimeParts] = useState([]); 
 
     /* ---------- Planner original ---------- */
     const [plannings, setPlannings] = useState([]);
@@ -632,14 +641,64 @@ export const PlanningCLIL = ({ userData }) => {
     const fetchCurriculum = async () => {
         setLoadingCurriculum(true);
         try {
-            const [mapsResp, syllResp] = await Promise.all([
+            const [mapsResp, syllResp, primeResp] = await Promise.all([
                 fetch(`${API_URL}?sheet=Curriculum_Maps`).then(r => r.json()),
                 fetch(`${API_URL}?sheet=Syllabus_Templates`).then(r => r.json()),
+                fetch(`${API_URL}?sheet=Prime_Math`).then(r => r.json()).catch(() => []),
             ]);
             setCurriculumMaps(Array.isArray(mapsResp) ? mapsResp : []);
             setSyllabusTemplates(Array.isArray(syllResp) ? syllResp : []);
+            setPrimeMathMaps(Array.isArray(primeResp) ? primeResp : []);
         } catch (e) { console.error("Error cargando currículo:", e); }
         setLoadingCurriculum(false);
+    };
+
+    /* Normaliza grados: acepta "FIRST GRADE", "1", "GRADO 1", "PRIMERO"... y los lleva a un número */
+    const gradeToNum = (g) => {
+        const s = norm(g);
+        const map = {
+            'FIRST GRADE': '1', 'GRADE 1': '1', 'GRADO 1': '1', 'PRIMERO': '1', '1': '1', 'FIRST': '1',
+            'SECOND GRADE': '2', 'GRADE 2': '2', 'GRADO 2': '2', 'SEGUNDO': '2', '2': '2', 'SECOND': '2',
+            'THIRD GRADE': '3', 'GRADE 3': '3', 'GRADO 3': '3', 'TERCERO': '3', '3': '3', 'THIRD': '3',
+            'FOURTH GRADE': '4', 'GRADE 4': '4', 'GRADO 4': '4', 'CUARTO': '4', '4': '4', 'FOURTH': '4',
+            'FIFTH GRADE': '5', 'GRADE 5': '5', 'GRADO 5': '5', 'QUINTO': '5', '5': '5', 'FIFTH': '5',
+        };
+        if (map[s]) return map[s];
+        // último recurso: extrae el primer dígito que aparezca
+        const m = s.match(/\d+/);
+        return m ? m[0] : s;
+    };
+
+    /* Busca el JSON de PR1ME Math solo por Grade (Subject debe ser MATH). El term NO se usa. */
+    const resolvePrimeMath = (subject, grade) => {
+        const isMath = /math|matem/i.test(String(subject || ''));
+        if (!isMath) return { found: false, reason: 'not_math', data: null };
+
+        // Diagnóstico: si la hoja no cargó, avísalo claro
+        if (!Array.isArray(primeMathMaps) || primeMathMaps.length === 0) {
+            console.warn('[PR1ME] primeMathMaps está vacío. Revisa el GET a la hoja Prime_Math.');
+            return { found: false, reason: 'empty_sheet', data: null };
+        }
+
+        const gNum = gradeToNum(grade);
+        const candidates = primeMathMaps.filter(m => gradeToNum(m.Grade) === gNum);
+
+        console.log('[PR1ME] grado pedido:', grade, '→', gNum,
+            '| filas totales:', primeMathMaps.length,
+            '| coincidencias de grado:', candidates.length,
+            '| grados en tabla:', primeMathMaps.map(m => m.Grade));
+
+        if (!candidates.length) return { found: false, reason: 'no_row', data: null };
+
+        // Devuelve TODAS las filas del grado (para grado 5 hay dos: parte 1 y 2)
+        return { found: true, reason: '', rows: candidates };
+    };
+
+    /* Parsea una fila concreta de Prime_Math y valida su JSON */
+    const loadPrimeRow = (row) => {
+        const data = safeParse(row.Content_JSON);
+        if (!data || !Array.isArray(data.capitulos)) return { ok: false, data: null };
+        return { ok: true, data };
     };
 
     const resolveCurriculum = (subject, grade, term) => {
@@ -690,6 +749,8 @@ export const PlanningCLIL = ({ userData }) => {
         setSelSubject(''); setSelGrade(''); setSelTerm('');
         setSelectedPromptId(''); setPromptValues({}); setNumSessions(1); setSelMethodology('');
         setGenSessions([]); setGenError(''); setLumiCtx(null);
+        setPrimeData(null); setPrimeChapterIdx(''); setPrimeUnitIdx('');
+        setPrimeSelectedSubs([]); setPrimeParts([]); setPrimeError('');
         pushLumi(`¡Hola, ${teacherFirstName}! 👋 Soy Lumi, tu copiloto de planeaciones.`);
         pushLumi('Diseño tus clases contigo usando tu malla curricular y tu plan de área. Empecemos por elegir qué vas a planear.', null, () => setLumiStage('context'));
     };
@@ -712,22 +773,109 @@ export const PlanningCLIL = ({ userData }) => {
     const selectPrompt = (promptDef) => {
         setSelectedPromptId(promptDef.id);
         setPromptValues({});
+        // Reinicia selección PR1ME
+        setPrimeData(null); setPrimeChapterIdx(''); setPrimeUnitIdx('');
+        setPrimeSelectedSubs([]); setPrimeError(''); setPrimeParts([]);
         pushUser(`Plantilla: ${promptDef.label}`);
         setLumiStage('loading');
+
+        // Flujo especial: plantilla PR1ME Math
+        // Flujo especial: plantilla PR1ME Math
+        if (promptDef.primeMath) {
+            const res = resolvePrimeMath(selSubject, selGrade);
+            if (!res.found) {
+                let msg = '';
+                if (res.reason === 'not_math') {
+                    msg = `⚠️ La plantilla PR1ME Math solo funciona con materias de matemáticas. Elegiste "${selSubject}". Vuelve y escoge otra plantilla, o cambia de materia.`;
+                } else if (res.reason === 'empty_sheet') {
+                    msg = `⚠️ No pude cargar la tabla Prime_Math (llegó vacía). Revisa que la hoja exista con ese nombre exacto y que el despliegue esté actualizado. Luego toca 🔄 y reintenta.`;
+                } else {
+                    msg = `⚠️ No encontré datos de PR1ME Math para ${selGrade}. Verifica que ese grado esté escrito igual en la tabla (ej: "FIRST GRADE").`;
+                }
+                pushLumi(msg, null, () => setLumiStage('prompt'));
+                return;
+            }
+
+            // Si el grado tiene varios libros (ej. grado 5), pregunta cuál usar
+            if (res.rows.length > 1) {
+                setPrimeParts(res.rows);
+                pushLumi(`Este grado tiene ${res.rows.length} libros PR1ME Math. Elige con cuál vas a planear 👇`, null, () => setLumiStage('primeParts'));
+                return;
+            }
+
+            // Un solo libro: cárgalo directo
+            const loaded = loadPrimeRow(res.rows[0]);
+            if (!loaded.ok) {
+                pushLumi(`⚠️ Encontré la fila de ${selGrade}, pero el Content_JSON no se pudo leer. Revisa que el JSON de esa celda esté completo.`, null, () => setLumiStage('prompt'));
+                return;
+            }
+            setPrimeData(loaded.data);
+            pushLumi(`Perfecto. Cargué el libro PR1ME Math de ${selGrade}. Ahora elige el capítulo, la unidad y los temas que verás 👇`, null, () => setLumiStage('fields'));
+            return;
+        }
+
         pushLumi(`Genial. Completa estos datos y dime cuántas sesiones quieres (máximo ${MAX_SESSIONS}).`, null, () => setLumiStage('fields'));
+    };
+
+    /* El profe elige qué libro PR1ME usar cuando el grado tiene varias partes */
+    const selectPrimePart = (row) => {
+        pushUser(`Libro: ${row.Name}`);
+        const loaded = loadPrimeRow(row);
+        if (!loaded.ok) {
+            pushLumi(`⚠️ Ese libro (${row.Name}) tiene el Content_JSON dañado o incompleto. Revisa esa celda.`, null, () => setLumiStage('prompt'));
+            return;
+        }
+        setPrimeData(loaded.data);
+        setPrimeParts([]);
+        setLumiStage('loading');
+        pushLumi(`Genial, usaré ${row.Name}. Ahora elige el capítulo, la unidad y los temas 👇`, null, () => setLumiStage('fields'));
     };
 
     const currentPrompt = PROMPT_BANK.find(p => p.id === selectedPromptId);
 
     const submitFields = async () => {
         if (!currentPrompt) return;
-        // validar campos requeridos mínimos
-        const missing = (currentPrompt.fields || []).filter(f => !String(promptValues[f.key] || '').trim());
+
+        // Construye valores extra si es la plantilla PR1ME Math
+        let primeValues = {};
+        if (currentPrompt.primeMath) {
+            if (primeChapterIdx === '' || primeUnitIdx === '' || !primeSelectedSubs.length) {
+                setGenError('Elige capítulo, unidad y al menos un tema.'); return;
+            }
+            const chap = primeData.capitulos[Number(primeChapterIdx)];
+            const unit = chap?.unidades?.[Number(primeUnitIdx)];
+            const subs = (unit?.subunidades || []).filter(su => primeSelectedSubs.includes(su.id));
+
+            // Enumera los temas como espera Lumi: "1. tema, 2. tema..."
+            const selectedTopics = subs.map((su, i) => `${i + 1}. ${su.titulo}`).join(', ');
+            const primeObjectives = subs.flatMap(su => su.objetivos || []).map(o => `- ${o}`).join('\n');
+            const primeStages = [...new Set(subs.flatMap(su => su.stages || []))].join(', ');
+            const primeConcepts = subs
+                .map(su => [su.concepto_clave, (su.materiales || []).join('; ')].filter(Boolean).join(' | '))
+                .filter(Boolean).join('\n- ');
+
+            primeValues = {
+                chapterTitle: `Cap ${chap.numero}: ${chap.titulo}`,
+                unitTitle: `Unidad ${unit.unidad}: ${unit.titulo}`,
+                selectedTopics,
+                primeObjectives: primeObjectives || 'No especificados',
+                primeStages: primeStages || 'C-P-A',
+                primeConcepts: primeConcepts || 'No especificados',
+            };
+        }
+
+        // Junta los valores del profe con los de PR1ME
+        const mergedValues = { ...promptValues, ...primeValues };
+
+        // validar campos requeridos que llena el profe
+        const missing = (currentPrompt.fields || []).filter(f => !String(mergedValues[f.key] || '').trim());
         if (missing.length) { setGenError('Completa todos los campos antes de enviar.'); return; }
         setGenError('');
 
         const sessions = Math.min(Math.max(1, Number(numSessions) || 1), MAX_SESSIONS);
-        const summary = (currentPrompt.fields || []).map(f => `${f.label}: ${promptValues[f.key]}`).join(' · ');
+        const summary = currentPrompt.primeMath
+            ? `PR1ME · ${primeValues.chapterTitle} · ${primeValues.unitTitle} · Temas: ${primeValues.selectedTopics}`
+            : (currentPrompt.fields || []).map(f => `${f.label}: ${mergedValues[f.key]}`).join(' · ');
         pushUser(`${summary} · Sesiones: ${sessions}`);
 
         setLumiStage('generating');
@@ -736,7 +884,7 @@ export const PlanningCLIL = ({ userData }) => {
         const syllabusJson = lumiCtx?.syllabus ? safeParse(lumiCtx.syllabus.Summary_JSON) : null;
         const masterPrompt = buildMasterPrompt({
             promptDef: currentPrompt,
-            values: promptValues,
+            values: mergedValues,
             sessions,
             subject: selSubject,
             grade: selGrade,
@@ -1312,6 +1460,32 @@ export const PlanningCLIL = ({ userData }) => {
                             </div>
                         )}
 
+                        {/* PASO: elegir parte del libro (grado con varios libros PR1ME) */}
+                        {lumiStage === 'primeParts' && (
+                            <div className="ctx-panel">
+                                <div className="ctx-step">
+                                    <label>¿Con cuál libro PR1ME Math vas a planear?</label>
+                                    <div className="prime-parts">
+                                        {primeParts.map((row, i) => (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                className="prime-part-card"
+                                                onClick={() => selectPrimePart(row)}
+                                            >
+                                                <span className="prime-part-icon">📘</span>
+                                                <div className="prime-part-body">
+                                                    <strong>{row.Name}</strong>
+                                                    <small>{row.Grade}</small>
+                                                </div>
+                                                <span className="prime-part-arrow">→</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* PASO: elegir prompt */}
                         {lumiStage === 'prompt' && (
                             <div className="ctx-panel">
@@ -1367,6 +1541,74 @@ export const PlanningCLIL = ({ userData }) => {
                                         </button>
                                     </label>
 
+                                    {/* ===== SELECTOR PR1ME MATH (solo plantilla prime_math_plan) ===== */}
+                                    {currentPrompt.primeMath && primeData && (
+                                        <div className="prime-selector">
+                                            <div className="lumi-field">
+                                                <span>📘 Capítulo del libro</span>
+                                                <select
+                                                    value={primeChapterIdx}
+                                                    onChange={e => {
+                                                        setPrimeChapterIdx(e.target.value);
+                                                        setPrimeUnitIdx('');
+                                                        setPrimeSelectedSubs([]);
+                                                    }}
+                                                >
+                                                    <option value="">Selecciona un capítulo…</option>
+                                                    {primeData.capitulos.map((c, i) => (
+                                                        <option key={i} value={i}>Cap {c.numero} · {c.titulo}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {primeChapterIdx !== '' && (
+                                                <div className="lumi-field">
+                                                    <span>📗 Unidad</span>
+                                                    <select
+                                                        value={primeUnitIdx}
+                                                        onChange={e => {
+                                                            setPrimeUnitIdx(e.target.value);
+                                                            setPrimeSelectedSubs([]);
+                                                        }}
+                                                    >
+                                                        <option value="">Selecciona una unidad…</option>
+                                                        {(primeData.capitulos[Number(primeChapterIdx)]?.unidades || []).map((u, i) => (
+                                                            <option key={i} value={i}>Unidad {u.unidad} · {u.titulo}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {primeUnitIdx !== '' && (
+                                                <div className="lumi-field">
+                                                    <span>🎯 Temas a ver (elige uno o varios)</span>
+                                                    <div className="prime-topics">
+                                                        {(primeData.capitulos[Number(primeChapterIdx)]?.unidades?.[Number(primeUnitIdx)]?.subunidades || []).map(su => {
+                                                            const on = primeSelectedSubs.includes(su.id);
+                                                            return (
+                                                                <button
+                                                                    type="button"
+                                                                    key={su.id}
+                                                                    className={`prime-topic-chip ${on ? 'on' : ''}`}
+                                                                    onClick={() => setPrimeSelectedSubs(prev =>
+                                                                        on ? prev.filter(x => x !== su.id) : [...prev, su.id]
+                                                                    )}
+                                                                >
+                                                                    <strong>{su.id}</strong> {su.titulo}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {primeSelectedSubs.length > 0 && (
+                                                        <small style={{ display: 'block', marginTop: '8px', color: '#5a6782', fontSize: '0.78rem' }}>
+                                                            ✅ {primeSelectedSubs.length} tema(s) seleccionado(s). Lumi tomará sus objetivos oficiales y su método automáticamente.
+                                                        </small>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {currentPrompt.fields.map(f => (
                                         <div key={f.key} className="lumi-field">
                                             <span>{f.label}</span>
@@ -1392,9 +1634,21 @@ export const PlanningCLIL = ({ userData }) => {
                                     </div>
 
                                     {/* Input de sesiones de vuelta a la normalidad, limpio */}
+                                    {/* Selector de sesiones por botones (evita errores de flechas) */}
                                     <div className="lumi-field">
                                         <span>¿Cuántas sesiones quieres generar en total?</span>
-                                        <input type="number" min="1" max={MAX_SESSIONS} value={numSessions} onChange={e => setNumSessions(e.target.value)} />
+                                        <div className="session-picker">
+                                            {[1, 2, 3, 4, 5].map(n => (
+                                                <button
+                                                    type="button"
+                                                    key={n}
+                                                    className={`session-num ${Number(numSessions) === n ? 'on' : ''}`}
+                                                    onClick={() => setNumSessions(n)}
+                                                >
+                                                    {n}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {/* 💡 BLOQUE INTERROGANTE: Se mantiene intacto tal cual como lo tenías */}

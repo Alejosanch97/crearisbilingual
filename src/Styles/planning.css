@@ -3240,7 +3240,100 @@
   .lm-btn { width: 100%; }
 }
 
+/* ===== Selector PR1ME Math ===== */
+.prime-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 6px;
+    padding: 14px;
+    border: 1px solid #dbe3f0;
+    border-radius: 14px;
+    background: #f7faff;
+}
+.prime-topics {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+.prime-topic-chip {
+    text-align: left;
+    padding: 10px 12px;
+    border: 1.5px solid #d7dee9;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #33415c;
+    transition: all .15s ease;
+}
+.prime-topic-chip strong {
+    color: #2563eb;
+    margin-right: 6px;
+}
+.prime-topic-chip:hover { border-color: #93b4f5; }
+.prime-topic-chip.on {
+    border-color: #2563eb;
+    background: #eff5ff;
+    box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
 
+/* ===== Selector de sesiones por botones ===== */
+.session-picker {
+    display: flex;
+    gap: 8px;
+}
+.session-num {
+    flex: 1;
+    padding: 12px 0;
+    border: 1.5px solid #d7dee9;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #33415c;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.session-num:hover { border-color: #93b4f5; }
+.session-num.on {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+}
+
+
+/* ===== Selector de parte del libro PR1ME (grado 5) ===== */
+.prime-parts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+.prime-part-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1.5px solid #d7dee9;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    transition: all .15s ease;
+}
+.prime-part-card:hover {
+    border-color: #2563eb;
+    background: #f7faff;
+    transform: translateX(2px);
+}
+.prime-part-icon { font-size: 1.5rem; }
+.prime-part-body { flex: 1; display: flex; flex-direction: column; }
+.prime-part-body strong { color: #33415c; font-size: 0.95rem; }
+.prime-part-body small { color: #8a94a6; font-size: 0.75rem; }
+.prime-part-arrow { color: #2563eb; font-weight: 700; font-size: 1.1rem; }
 
 
 @media (max-width: 600px) {
