@@ -61,7 +61,7 @@ const PROMPT_BANK = [
         lang: 'en',
         primeMath: true, // ← marca especial: activa el flujo con JSON de PR1ME Math
         template:
-            'Act as an expert PR1ME Mathematics curriculum designer for a bilingual Colombian school. Design a step-by-step lesson plan STRICTLY anchored to the PR1ME Mathematics program. Chapter: "{chapterTitle}". Unit: "{unitTitle}". Selected sub-topics to teach: {selectedTopics}. Official PR1ME learning objectives for these sub-topics: {primeObjectives}. Pedagogical stages present (C-P-A): {primeStages}. Key concepts / materials from the guide: {primeConcepts}. Teacher\'s own learning goal for the session: {goal}. Respect the PR1ME lesson structure (Let\'s Remember → EXPLORE → Let\'s Learn C-P-A → Let\'s Do → Let\'s Practice → Mind Stretcher) and the Concrete → Pictorial → Abstract progression where applicable.',
+            'Act as an expert PR1ME Mathematics curriculum designer for a bilingual Colombian school. Design a step-by-step lesson plan STRICTLY anchored to the PR1ME Mathematics program. Follow the PR1ME lesson flow and the Concrete → Pictorial → Abstract progression. Anchor every activity to the official objectives; do not invent content outside PR1ME. (Per-session details are provided below.)',
         fields: [
             // Este campo lo escribe el profe manualmente (su meta real)
             { key: 'goal', label: 'Tu objetivo de aprendizaje para la sesión', type: 'text', placeholder: 'Ej: Que los estudiantes sumen sin reagrupar usando bloques base 10' },
@@ -154,7 +154,7 @@ const INCLUSION_STRATEGIES = [
 
 const TERMS = ["First Term", "Second Term", "Third Term", "Fourth Term"];
 const TERM_NUMBER = { "First Term": 1, "Second Term": 2, "Third Term": 3, "Fourth Term": 4 };
-const MAX_SESSIONS = 5;
+const MAX_SESSIONS = 3;
 
 const ASSESSMENT_DIMENSIONS = ["Saber y Pensar (45%)", "Hacer e Innovar (45%)", "Ser y Sentir (10%)"];
 const EVALUATION_INSTRUMENTS = ["Exit Ticket (formativa)", "Rúbrica", "Checklist", "Quiz", "Observación directa", "Simulacro tipo SABER", "Proyecto Maker", "Sustentación oral"];
@@ -575,6 +575,9 @@ export const PlanningCLIL = ({ userData }) => {
     const [primeError, setPrimeError] = useState('');
     const [primeParts, setPrimeParts] = useState([]); 
 
+    const [primeSessions, setPrimeSessions] = useState([]);
+    const [primeNumSessions, setPrimeNumSessions] = useState(0);
+
     /* ---------- Planner original ---------- */
     const [plannings, setPlannings] = useState([]);
     const [syncQueue, setSyncQueue] = useState([]);
@@ -751,6 +754,7 @@ export const PlanningCLIL = ({ userData }) => {
         setGenSessions([]); setGenError(''); setLumiCtx(null);
         setPrimeData(null); setPrimeChapterIdx(''); setPrimeUnitIdx('');
         setPrimeSelectedSubs([]); setPrimeParts([]); setPrimeError('');
+        setPrimeSessions([]); setPrimeNumSessions(0);
         pushLumi(`¡Hola, ${teacherFirstName}! 👋 Soy Lumi, tu copiloto de planeaciones.`);
         pushLumi('Diseño tus clases contigo usando tu malla curricular y tu plan de área. Empecemos por elegir qué vas a planear.', null, () => setLumiStage('context'));
     };
@@ -776,6 +780,7 @@ export const PlanningCLIL = ({ userData }) => {
         // Reinicia selección PR1ME
         setPrimeData(null); setPrimeChapterIdx(''); setPrimeUnitIdx('');
         setPrimeSelectedSubs([]); setPrimeError(''); setPrimeParts([]);
+        setPrimeSessions([]); setPrimeNumSessions(0);
         pushUser(`Plantilla: ${promptDef.label}`);
         setLumiStage('loading');
 
@@ -804,13 +809,16 @@ export const PlanningCLIL = ({ userData }) => {
             }
 
             // Un solo libro: cárgalo directo
+            // Un solo libro: cárgalo directo
             const loaded = loadPrimeRow(res.rows[0]);
             if (!loaded.ok) {
                 pushLumi(`⚠️ Encontré la fila de ${selGrade}, pero el Content_JSON no se pudo leer. Revisa que el JSON de esa celda esté completo.`, null, () => setLumiStage('prompt'));
                 return;
             }
             setPrimeData(loaded.data);
-            pushLumi(`Perfecto. Cargué el libro PR1ME Math de ${selGrade}. Ahora elige el capítulo, la unidad y los temas que verás 👇`, null, () => setLumiStage('fields'));
+            setPrimeNumSessions(0);
+            setPrimeSessions([]);
+            pushLumi(`Perfecto. Cargué el libro PR1ME Math de ${selGrade}. Primero dime cuántas sesiones quieres planear 👇`, null, () => setLumiStage('primeCount'));
             return;
         }
 
@@ -827,14 +835,234 @@ export const PlanningCLIL = ({ userData }) => {
         }
         setPrimeData(loaded.data);
         setPrimeParts([]);
+        setPrimeNumSessions(0);
+        setPrimeSessions([]);
         setLumiStage('loading');
-        pushLumi(`Genial, usaré ${row.Name}. Ahora elige el capítulo, la unidad y los temas 👇`, null, () => setLumiStage('fields'));
+        pushLumi(`Genial, usaré ${row.Name}. Primero dime cuántas sesiones quieres planear 👇`, null, () => setLumiStage('primeCount'));
     };
 
     const currentPrompt = PROMPT_BANK.find(p => p.id === selectedPromptId);
 
+    const normalizeGenSession = (s, i) => ({
+        Topic: s.Topic || '',
+        Objective: s.Objective || '',
+        "The Hook": s["The Hook"] || s.Hook || '',
+        "Vocabulary Big 5": s["Vocabulary Big 5"] || '',
+        "Thinking Skill": s["Thinking Skill"] || '',
+        "Language Frame": s["Language Frame"] || '',
+        "Thinking Routine": s["Thinking Routine"] || '',
+        "Parent Task": s["Parent Task"] || '',
+        "Weekly Challenge": s["Weekly Challenge"] || '',
+        DBA_Reference: s.DBA_Reference || '',
+        SDG_Connection: s.SDG_Connection || '',
+        Assessment_Dimension: s.Assessment_Dimension || '',
+        Evaluation_Instrument: s.Evaluation_Instrument || '',
+        Standard: s.Standard || '',
+        Dimension: s.Dimension || '',
+        Principle: s.Principle || '',
+        Value: s.Value || '',
+        Methodology: s.Methodology || (METHODOLOGIES.find(m => m.id === selMethodology)?.name || ''),
+        Inclusion_Adjustments: Array.isArray(s.Inclusion_Adjustments) ? s.Inclusion_Adjustments : [],
+        Learning_Evidence: s.Learning_Evidence || null,
+        Session_Number: s.Session_Number || String(i + 1),
+        Feedback_Questions: Array.isArray(s.Feedback_Questions)
+            ? s.Feedback_Questions.filter(q => q && (typeof q === 'string' ? q.trim() : q.q))
+            : [],
+        "Richmond Resources": '',
+        "Activity Link": '',
+        ClassDojo_Link: '',
+        "Start Date": '',
+        "Finish Date": '',
+    });
+
+    /* El profe elige cuántas sesiones PR1ME quiere; se crean N bloques vacíos */
+    const confirmPrimeCount = (n) => {
+        const count = Math.min(Math.max(1, n), MAX_SESSIONS);
+        setPrimeNumSessions(count);
+        setPrimeSessions(Array.from({ length: count }, () => ({
+            chapterIdx: '', unitIdx: '', selectedSubs: [], goal: ''
+        })));
+        setPrimeError('');
+        pushUser(`${count} sesión(es) PR1ME`);
+        setLumiStage('loading');
+        pushLumi(`Perfecto. Llena los datos de cada una de las ${count} sesión(es). Cada bloque es independiente: puedes elegir capítulos y temas distintos 👇`, null, () => setLumiStage('primeFields'));
+    };
+
+    /* Actualiza un campo de una sesión PR1ME específica */
+    const updatePrimeSession = (idx, patch) => {
+        setPrimeSessions(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s));
+    };
+
+    /* Construye los primeValues de UNA sesión a partir de su selección */
+    const buildPrimeValuesFor = (sess) => {
+        const chap = primeData.capitulos[Number(sess.chapterIdx)];
+        const unit = chap?.unidades?.[Number(sess.unitIdx)];
+        const subs = (unit?.subunidades || []).filter(su => sess.selectedSubs.includes(su.id));
+        const selectedTopics = subs.map((su, i) => `${i + 1}. ${su.titulo}`).join(', ');
+        const primeObjectives = subs.flatMap(su => su.objetivos || []).map(o => `- ${o}`).join('\n');
+        const primeStages = [...new Set(subs.flatMap(su => su.stages || []))].join(', ');
+        const primeConcepts = subs
+            .map(su => [su.concepto_clave, (su.vocabulario || []).join(', '), (su.materiales || []).join('; ')].filter(Boolean).join(' | '))
+            .filter(Boolean).join('\n- ');
+
+        const ng = primeData.notas_generales || {};
+        const sb = ng.stages_pedagogicas?.stages_base || {};
+
+        return {
+            chapterTitle: `Cap ${chap.numero}: ${chap.titulo}`,
+            unitTitle: `Unidad ${unit.unidad}: ${unit.titulo}`,
+            selectedTopics,
+            primeObjectives: primeObjectives || 'No especificados',
+            primeStages: primeStages || 'C-P-A',
+            primeConcepts: primeConcepts || 'No especificados',
+            goal: sess.goal || '',
+            primeCollection: primeData.coleccion || 'PR1ME Mathematics',
+            primePublisher: primeData.editorial || 'Scholastic Education International',
+            primePart: primeData.parte || 'N/A',
+            primeCPADesc: ng.stages_pedagogicas?.descripcion || 'Enfoque Concreto-Pictórico-Abstracto',
+            primeConcreteDesc: sb.concrete || 'Materiales manipulables',
+            primePictorialDesc: sb.pictorial || 'Representación con imágenes/diagramas',
+            primeAbstractDesc: sb.abstract || 'Representación simbólica',
+            primeLessonStructure: Array.isArray(ng.estructura_leccion_tipica) ? ng.estructura_leccion_tipica.join(' → ') : 'Let\'s Remember → EXPLORE → Let\'s Learn → Let\'s Do → Let\'s Practice → Mind Stretcher',
+            primeProblemSteps: Array.isArray(ng.pasos_resolucion_problemas) ? ng.pasos_resolucion_problemas.join(', ') : 'Understand, Plan, Answer, Check, +Plus',
+        };
+    };
+
+    /* Genera las N sesiones PR1ME en UNA sola llamada, con prompt compacto (tokens de entrada mínimos) */
+    const submitPrimeFields = async () => {
+        // Validar cada sesión
+        for (let i = 0; i < primeSessions.length; i++) {
+            const s = primeSessions[i];
+            if (s.chapterIdx === '' || s.unitIdx === '' || !s.selectedSubs.length || !String(s.goal).trim()) {
+                setPrimeError(`Completa capítulo, unidad, temas y objetivo en la sesión ${i + 1}.`);
+                return;
+            }
+        }
+        setPrimeError('');
+        setLumiStage('generating');
+        pushLumi(`🧠 Diseñando tus ${primeSessions.length} sesión(es) PR1ME Math… dame unos segundos.`, 400);
+
+        const syllabusJson = lumiCtx?.syllabus ? safeParse(lumiCtx.syllabus.Summary_JSON) : null;
+        const methodology = METHODOLOGIES.find(m => m.id === selMethodology);
+
+        // Contexto por sesión: SOLO lo esencial (tema, unidad, objetivos oficiales, meta del profe)
+        const sessionsContext = primeSessions.map((sess, idx) => {
+            const pv = buildPrimeValuesFor(sess);
+            return `SESSION ${idx + 1} | ${pv.chapterTitle} > ${pv.unitTitle}
+Topics: ${pv.selectedTopics}
+Official objectives: ${pv.primeObjectives.replace(/\n/g, ' ')}
+Teacher goal: ${pv.goal}`;
+        }).join('\n\n');
+
+        // Contexto PR1ME compacto (una sola línea, no párrafos): colección + método C-P-A
+        // Contexto PR1ME compacto (una sola línea, no párrafos): colección + método C-P-A
+        const first = buildPrimeValuesFor(primeSessions[0]);
+        const primeHeader = `PR1ME context: Collection "${first.primeCollection}" (${first.primePart}). Use the C-P-A approach (Concrete→Pictorial→Abstract) and the PR1ME lesson flow: ${first.primeLessonStructure}. For non-routine problems use: ${first.primeProblemSteps}.
+
+PR1ME 8-STEP HOOK STRUCTURE (override the generic institutional steps for these sessions). The "The Hook" field MUST follow EXACTLY these 8 steps, in this order, each written as "Paso N: [Title]: [concrete 2-3 sentence activity]":
+Paso 1: Let's Remember: activate prior knowledge with a quick review tied to the topic.
+Paso 2: EXPLORE: pose a motivating problem students will revisit at the end.
+Paso 3: Concrete: students use manipulatives (base-ten blocks, counters, etc.) to build the concept hands-on.
+Paso 4: Pictorial: students represent the concept with drawings/diagrams (number lines, bar models).
+Paso 5: Abstract: students write equations, number sentences or vertical form.
+Paso 6: Let's Do / Guided Practice: teacher guides students through worked examples.
+Paso 7: Let's Practice / Game: students practice independently or through a reinforcement game.
+Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand → Plan → Answer → Check → +Plus) followed by a short reflection.
+IMPORTANT: adapt the wording of each step to the specific topic of each session, but keep this exact 8-step skeleton and these stage names.`;
+
+        // Prompt maestro pidiendo N sesiones (mismo patrón que los otros prompts que sí funcionan)
+        const masterPrompt = buildMasterPrompt({
+            promptDef: currentPrompt,
+            values: {
+                chapterTitle: 'See per-session blocks',
+                unitTitle: 'See per-session blocks',
+                selectedTopics: 'See per-session blocks',
+                primeObjectives: 'See per-session blocks',
+                primeStages: first.primeStages,
+                primeConcepts: 'See per-session blocks',
+                goal: 'See per-session blocks',
+                primeCollection: first.primeCollection,
+                primePublisher: first.primePublisher,
+                primePart: first.primePart,
+                primeCPADesc: first.primeCPADesc,
+                primeConcreteDesc: first.primeConcreteDesc,
+                primePictorialDesc: first.primePictorialDesc,
+                primeAbstractDesc: first.primeAbstractDesc,
+                primeLessonStructure: first.primeLessonStructure,
+                primeProblemSteps: first.primeProblemSteps,
+            },
+            sessions: primeSessions.length,
+            subject: selSubject,
+            grade: selGrade,
+            term: selTerm,
+            mallaCtx: lumiCtx?.ctx,
+            syllabusJson,
+            methodology,
+        });
+
+        const fullPrompt = `${masterPrompt}
+
+${primeHeader}
+
+=== GENERATE EXACTLY ${primeSessions.length} DISTINCT SESSION(S) — ONE PER BLOCK BELOW (do NOT merge them) ===
+${sessionsContext}
+
+CRITICAL: Return an array of EXACTLY ${primeSessions.length} session object(s), one per SESSION block above, in order. Even if two blocks share a chapter, keep them SEPARATE.`;
+
+        try {
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'generateWithLumi', prompt: fullPrompt })
+            });
+            const data = await resp.json();
+
+            console.log('[PR1ME] status:', data?.status, '| raw:', (data?.text || data?.raw || '').slice(0, 200));
+
+            if (data.status !== 'success') {
+                pushLumi(`⚠️ Hubo un problema: ${data.message || 'error'}. Intenta de nuevo.`, 300);
+                setLumiStage('primeFields');
+                return;
+            }
+
+            let arr = parseGeminiSessions(data.text || data.raw);
+            if (arr && !Array.isArray(arr)) {
+                const arrKey = Object.keys(arr).find(k => Array.isArray(arr[k]));
+                arr = arrKey ? arr[arrKey] : [arr];
+            }
+
+            if (!arr || !arr.length) {
+                pushLumi('⚠️ No pude leer la respuesta de la IA. Intenta de nuevo.', 300);
+                setLumiStage('primeFields');
+                return;
+            }
+
+            console.log('[PR1ME] solicitadas:', primeSessions.length, '| generadas:', arr.length);
+
+            const normalized = arr.slice(0, primeSessions.length).map((s, i) => {
+                s.Session_Number = String(i + 1);
+                return normalizeGenSession(s, i);
+            });
+
+            if (normalized.length < primeSessions.length) {
+                pushLumi(`⚠️ Pediste ${primeSessions.length} sesiones pero la IA devolvió ${normalized.length}. Se guardarán las generadas.`, 300);
+            }
+
+            setGenSessions(normalized);
+            pushLumi(`✨ ¡Listo! Diseñé ${normalized.length} sesión(es) PR1ME. Revísalas abajo, edita lo que quieras y guárdalas.`, 500);
+            setLumiStage('review');
+        } catch (e) {
+            console.error('[PR1ME] error:', e);
+            pushLumi('⚠️ Error de conexión al generar. Revisa tu red e intenta de nuevo.', 300);
+            setLumiStage('primeFields');
+        }
+    };
+
     const submitFields = async () => {
         if (!currentPrompt) return;
+
+        // Construye valores extra si es la plantilla PR1ME Math
+        // PR1ME Math ahora usa su propio flujo multisesión (submitPrimeFields)
+        if (currentPrompt.primeMath) { submitPrimeFields(); return; }
 
         // Construye valores extra si es la plantilla PR1ME Math
         let primeValues = {};
@@ -854,6 +1082,10 @@ export const PlanningCLIL = ({ userData }) => {
                 .map(su => [su.concepto_clave, (su.materiales || []).join('; ')].filter(Boolean).join(' | '))
                 .filter(Boolean).join('\n- ');
 
+            // Datos de nivel raíz del JSON PR1ME (notas generales fijas de la colección)
+            const ng = primeData.notas_generales || {};
+            const sb = ng.stages_pedagogicas?.stages_base || {};
+
             primeValues = {
                 chapterTitle: `Cap ${chap.numero}: ${chap.titulo}`,
                 unitTitle: `Unidad ${unit.unidad}: ${unit.titulo}`,
@@ -861,6 +1093,16 @@ export const PlanningCLIL = ({ userData }) => {
                 primeObjectives: primeObjectives || 'No especificados',
                 primeStages: primeStages || 'C-P-A',
                 primeConcepts: primeConcepts || 'No especificados',
+                // Notas generales de la colección PR1ME
+                primeCollection: primeData.coleccion || 'PR1ME Mathematics',
+                primePublisher: primeData.editorial || 'Scholastic Education International',
+                primePart: primeData.parte || 'N/A',
+                primeCPADesc: ng.stages_pedagogicas?.descripcion || 'Enfoque Concreto-Pictórico-Abstracto',
+                primeConcreteDesc: sb.concrete || 'Materiales manipulables',
+                primePictorialDesc: sb.pictorial || 'Representación con imágenes/diagramas',
+                primeAbstractDesc: sb.abstract || 'Representación simbólica',
+                primeLessonStructure: Array.isArray(ng.estructura_leccion_tipica) ? ng.estructura_leccion_tipica.join(' → ') : 'Let\'s Remember → EXPLORE → Let\'s Learn → Let\'s Do → Let\'s Practice → Mind Stretcher',
+                primeProblemSteps: Array.isArray(ng.pasos_resolucion_problemas) ? ng.pasos_resolucion_problemas.join(', ') : 'Understand, Plan, Answer, Check, +Plus',
             };
         }
 
@@ -917,38 +1159,8 @@ export const PlanningCLIL = ({ userData }) => {
                 return;
             }
             // normalizar: asegurar campos y numeración
-            const normalized = sessionsArr.slice(0, sessions).map((s, i) => ({
-                Topic: s.Topic || '',
-                Objective: s.Objective || '',
-                "The Hook": s["The Hook"] || s.Hook || '',
-                "Vocabulary Big 5": s["Vocabulary Big 5"] || '',
-                "Thinking Skill": s["Thinking Skill"] || '',
-                "Language Frame": s["Language Frame"] || '',
-                "Thinking Routine": s["Thinking Routine"] || '',
-                "Parent Task": s["Parent Task"] || '',
-                "Weekly Challenge": s["Weekly Challenge"] || '',
-                DBA_Reference: s.DBA_Reference || '',
-                SDG_Connection: s.SDG_Connection || '',
-                Assessment_Dimension: s.Assessment_Dimension || '',
-                Evaluation_Instrument: s.Evaluation_Instrument || '',
-                Standard: s.Standard || '',
-                Dimension: s.Dimension || '',
-                Principle: s.Principle || '',
-                Value: s.Value || '',
-                Methodology: s.Methodology || (METHODOLOGIES.find(m => m.id === selMethodology)?.name || ''),
-                Inclusion_Adjustments: Array.isArray(s.Inclusion_Adjustments) ? s.Inclusion_Adjustments : [],
-                Learning_Evidence: s.Learning_Evidence || null,
-                Session_Number: s.Session_Number || String(i + 1),
-                Feedback_Questions: Array.isArray(s.Feedback_Questions)
-                    ? s.Feedback_Questions.filter(q => q && (typeof q === 'string' ? q.trim() : q.q))
-                    : [],
-                // campos que llena el profe manualmente
-                "Richmond Resources": '',
-                "Activity Link": '',
-                ClassDojo_Link: '',
-                "Start Date": '',
-                "Finish Date": '',
-            }));
+            // normalizar: asegurar campos y numeración
+            const normalized = sessionsArr.slice(0, sessions).map((s, i) => normalizeGenSession(s, i));
             setGenSessions(normalized);
             pushLumi(`✨ ¡Listo! Diseñé ${normalized.length} sesión(es). Revísalas abajo, edita lo que quieras y guárdalas.`, 500);
             setLumiStage('review');
@@ -1460,6 +1672,139 @@ export const PlanningCLIL = ({ userData }) => {
                             </div>
                         )}
 
+                        {/* PASO PR1ME: elegir cantidad de sesiones ANTES de llenar datos */}
+                        {lumiStage === 'primeCount' && (
+                            <div className="ctx-panel">
+                                <div className="ctx-step">
+                                    <label>¿Cuántas sesiones PR1ME Math quieres planear? (máximo {MAX_SESSIONS})</label>
+                                    <div className="session-picker">
+                                        {Array.from({ length: MAX_SESSIONS }, (_, k) => k + 1).map(n => (
+                                            <button
+                                                type="button"
+                                                key={n}
+                                                className="session-num"
+                                                onClick={() => confirmPrimeCount(n)}
+                                            >
+                                                {n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="lumi-hint" style={{ marginTop: '12px' }}>
+                                        💡 Cada sesión tendrá su propio bloque: podrás elegir capítulos, unidades y temas distintos para cada una.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PASO PR1ME: N bloques de selección (uno por sesión) */}
+                        {lumiStage === 'primeFields' && currentPrompt && primeData && (
+                            <div className="ctx-panel">
+                                <div className="ctx-step">
+                                    <label>Completa cada sesión · {currentPrompt.label}</label>
+
+                                    <div className="lumi-field">
+                                        <span>Metodología (aplica a todas las sesiones)</span>
+                                        <select value={selMethodology} onChange={e => setSelMethodology(e.target.value)}>
+                                            <option value="">Institucional (por defecto)</option>
+                                            {METHODOLOGIES.map(m => (
+                                                <option key={m.id} value={m.id}>{m.name}</option>
+                                            ))}
+                                        </select>
+                                        {selMethodology && (
+                                            <small style={{ display: 'block', marginTop: '6px', color: '#5a6782', fontSize: '0.78rem' }}>
+                                                {METHODOLOGIES.find(m => m.id === selMethodology)?.desc}
+                                            </small>
+                                        )}
+                                    </div>
+
+                                    {primeSessions.map((sess, sIdx) => {
+                                        const chap = sess.chapterIdx !== '' ? primeData.capitulos[Number(sess.chapterIdx)] : null;
+                                        const unit = (chap && sess.unitIdx !== '') ? chap.unidades?.[Number(sess.unitIdx)] : null;
+                                        const subs = unit?.subunidades || [];
+                                        return (
+                                            <div key={sIdx} className="prime-session-block" style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px', marginBottom: '16px', background: '#fafbff' }}>
+                                                <div style={{ fontWeight: 700, marginBottom: '12px', color: '#4338ca' }}>📐 Sesión {sIdx + 1} de {primeSessions.length}</div>
+
+                                                <div className="prime-selector">
+                                                    <div className="lumi-field">
+                                                        <span>📘 Capítulo del libro</span>
+                                                        <select
+                                                            value={sess.chapterIdx}
+                                                            onChange={e => updatePrimeSession(sIdx, { chapterIdx: e.target.value, unitIdx: '', selectedSubs: [] })}
+                                                        >
+                                                            <option value="">Selecciona un capítulo…</option>
+                                                            {primeData.capitulos.map((c, i) => (
+                                                                <option key={i} value={i}>Cap {c.numero} · {c.titulo}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    {sess.chapterIdx !== '' && (
+                                                        <div className="lumi-field">
+                                                            <span>📗 Unidad</span>
+                                                            <select
+                                                                value={sess.unitIdx}
+                                                                onChange={e => updatePrimeSession(sIdx, { unitIdx: e.target.value, selectedSubs: [] })}
+                                                            >
+                                                                <option value="">Selecciona una unidad…</option>
+                                                                {(chap?.unidades || []).map((u, i) => (
+                                                                    <option key={i} value={i}>Unidad {u.unidad} · {u.titulo}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    )}
+
+                                                    {sess.unitIdx !== '' && (
+                                                        <div className="lumi-field">
+                                                            <span>🎯 Temas a ver (elige uno o varios)</span>
+                                                            <div className="prime-topics">
+                                                                {subs.map(su => {
+                                                                    const on = sess.selectedSubs.includes(su.id);
+                                                                    return (
+                                                                        <button
+                                                                            type="button"
+                                                                            key={su.id}
+                                                                            className={`prime-topic-chip ${on ? 'on' : ''}`}
+                                                                            onClick={() => updatePrimeSession(sIdx, {
+                                                                                selectedSubs: on
+                                                                                    ? sess.selectedSubs.filter(x => x !== su.id)
+                                                                                    : [...sess.selectedSubs, su.id]
+                                                                            })}
+                                                                        >
+                                                                            <strong>{su.id}</strong> {su.titulo}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {sess.selectedSubs.length > 0 && (
+                                                                <small style={{ display: 'block', marginTop: '8px', color: '#5a6782', fontSize: '0.78rem' }}>
+                                                                    ✅ {sess.selectedSubs.length} tema(s). Lumi tomará sus objetivos oficiales y su método automáticamente.
+                                                                </small>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="lumi-field">
+                                                        <span>Tu objetivo de aprendizaje para esta sesión</span>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Ej: Que los estudiantes sumen sin reagrupar usando bloques base 10"
+                                                            value={sess.goal}
+                                                            onChange={e => updatePrimeSession(sIdx, { goal: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <div className="lumi-hint">💡 Lumi no copia enlaces de videos — esos los agregas tú al guardar.</div>
+                                    {primeError && <div className="lumi-error">{primeError}</div>}
+                                    <button className="ctx-go" onClick={submitPrimeFields}>Generar {primeSessions.length} sesión(es) con Lumi ✨</button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* PASO: elegir parte del libro (grado con varios libros PR1ME) */}
                         {lumiStage === 'primeParts' && (
                             <div className="ctx-panel">
@@ -1541,8 +1886,8 @@ export const PlanningCLIL = ({ userData }) => {
                                         </button>
                                     </label>
 
-                                    {/* ===== SELECTOR PR1ME MATH (solo plantilla prime_math_plan) ===== */}
-                                    {currentPrompt.primeMath && primeData && (
+                                    {/* ===== SELECTOR PR1ME MATH (desactivado: PR1ME usa su flujo multisesión propio) ===== */}
+                                    {false && currentPrompt.primeMath && primeData && (
                                         <div className="prime-selector">
                                             <div className="lumi-field">
                                                 <span>📘 Capítulo del libro</span>
@@ -1638,7 +1983,7 @@ export const PlanningCLIL = ({ userData }) => {
                                     <div className="lumi-field">
                                         <span>¿Cuántas sesiones quieres generar en total?</span>
                                         <div className="session-picker">
-                                            {[1, 2, 3, 4, 5].map(n => (
+                                            {Array.from({ length: MAX_SESSIONS }, (_, k) => k + 1).map(n => (
                                                 <button
                                                     type="button"
                                                     key={n}
@@ -1794,7 +2139,6 @@ export const PlanningCLIL = ({ userData }) => {
                                     </div>
                                 ))}
                                 <div className="review-actions">
-                                    <button className="btn-regen" onClick={() => setLumiStage('fields')}>↺ Ajustar y regenerar</button>
                                     <button className="btn-accept" onClick={acceptAndSave} disabled={isSyncing}>{isSyncing ? "Guardando…" : "✅ Aceptar y guardar"}</button>
                                 </div>
                             </div>
