@@ -926,10 +926,27 @@ export const PlanningCLIL = ({ userData }) => {
 
     const currentPrompt = PROMPT_BANK.find(p => p.id === selectedPromptId);
 
+    /* Aplana "The Hook" a texto aunque la IA lo devuelva como objeto o array */
+    const hookToText = (h) => {
+        if (!h) return '';
+        if (typeof h === 'string') return h;
+        if (Array.isArray(h)) return h.map(hookToText).filter(Boolean).join(' ');
+        if (typeof h === 'object') {
+            // Ej: { "Paso 1": "...", "Paso 2": "..." } → "Paso 1: ... Paso 2: ..."
+            return Object.entries(h)
+                .map(([k, v]) => {
+                    const val = (v && typeof v === 'object') ? hookToText(v) : String(v || '');
+                    return /^paso/i.test(k) || /^step/i.test(k) ? `${k}: ${val}` : val;
+                })
+                .filter(Boolean).join(' ');
+        }
+        return String(h);
+    };
+
     const normalizeGenSession = (s, i) => ({
         Topic: s.Topic || '',
         Objective: s.Objective || '',
-        "The Hook": s["The Hook"] || s.Hook || '',
+        "The Hook": hookToText(s["The Hook"] || s.Hook),
         "Vocabulary Big 5": s["Vocabulary Big 5"] || '',
         "Thinking Skill": s["Thinking Skill"] || '',
         "Language Frame": s["Language Frame"] || '',
@@ -1283,7 +1300,8 @@ Teacher goal: ${pv.goal}`;
     };
 
     const acceptAndSave = async () => {
-        if (!genSessions.length) return;
+        if (!genSessions.length) { console.warn('[GUARDAR] No hay sesiones para guardar.'); return; }
+        if (isSyncing) return; // evita dobles clics
 
         const teacherKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
 
@@ -2100,22 +2118,43 @@ Teacher goal: ${pv.goal}`;
                                             </div>
                                         </div>
                                         {[
-                                            ["Topic", "Tema"], ["Objective", "Objetivo"], ["The Hook", "Desarrollo (8 pasos)"],
-                                            ["Vocabulary Big 5", "Vocabulary Big 5"], ["Thinking Skill", "Thinking Skill"],
-                                            ["Language Frame", "Language Frame"], ["Thinking Routine", "Thinking Routine"],
-                                            ["Parent Task", "Tarea / Parent Task"], ["Weekly Challenge", "Weekly Challenge"],
-                                            ["DBA_Reference", "DBA"], ["SDG_Connection", "ODS"],
-                                            ["Standard", "Estándar"], ["Dimension", "Dimensión"],
-                                            ["Principle", "Principio CREAR"], ["Value", "Valor"],
-                                            ["Assessment_Dimension", "Dimensión SIEE"], ["Evaluation_Instrument", "Instrumento"],
-                                        ].map(([field, label]) => (
-                                            <div key={field} className="review-field">
-                                                <label>{label}</label>
-                                                {field === "The Hook"
-                                                    ? <textarea value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)} />
-                                                    : <input type="text" value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)} />}
-                                            </div>
-                                        ))}
+                                            ["Topic", "Tema", "text"], ["Objective", "Objetivo", "text"], ["The Hook", "Desarrollo (8 pasos)", "textarea"],
+                                            ["Vocabulary Big 5", "Vocabulary Big 5", "text"], ["Thinking Skill", "Thinking Skill", "text"],
+                                            ["Language Frame", "Language Frame", "textarea"], ["Thinking Routine", "Thinking Routine", "routine"],
+                                            ["Parent Task", "Tarea / Parent Task", "text"], ["Weekly Challenge", "Weekly Challenge", "text"],
+                                            ["DBA_Reference", "DBA", "text"], ["SDG_Connection", "ODS", "text"],
+                                            ["Standard", "Estándar", "text"], ["Dimension", "Dimensión", "dimension"],
+                                            ["Principle", "Principio CREAR", "principle"], ["Value", "Valor", "value"],
+                                            ["Assessment_Dimension", "Dimensión SIEE", "assessment"], ["Evaluation_Instrument", "Instrumento", "instrument"],
+                                        ].map(([field, label, kind]) => {
+                                            // Opciones para los campos que son lista
+                                            const OPTS = {
+                                                dimension: DIMENSIONS,
+                                                value: VALUES,
+                                                principle: ["Cuidado", "Responsabilidad", "Excelencia", "Amor por el aprendizaje", "Relaciones sanas y armoniosas"],
+                                                assessment: ASSESSMENT_DIMENSIONS,
+                                                instrument: EVALUATION_INSTRUMENTS,
+                                                routine: CLIL_RESOURCES.thinkingRoutines,
+                                            };
+                                            const isSelect = OPTS[kind];
+                                            return (
+                                                <div key={field} className="review-field">
+                                                    <label>{label}</label>
+                                                    {kind === "textarea" ? (
+                                                        <textarea value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)} />
+                                                    ) : isSelect ? (
+                                                        <select value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)}>
+                                                            <option value="">Selecciona…</option>
+                                                            {/* Si Lumi trajo un valor que no está en la lista, lo mostramos igual */}
+                                                            {s[field] && !isSelect.includes(s[field]) && <option value={s[field]}>{s[field]}</option>}
+                                                            {isSelect.map(o => <option key={o} value={o}>{o}</option>)}
+                                                        </select>
+                                                    ) : (
+                                                        <input type="text" value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)} />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                         <div className="review-field">
                                             <label>Activity Link (tú lo agregas)</label>
                                             <input type="text" placeholder="https://..." value={s["Activity Link"] || ''} onChange={e => updateGenSession(idx, "Activity Link", e.target.value)} />
