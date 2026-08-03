@@ -674,7 +674,7 @@ export const PlanningCLIL = ({ userData }) => {
 
     /* Busca el JSON de PR1ME Math solo por Grade (Subject debe ser MATH). El term NO se usa. */
     const resolvePrimeMath = (subject, grade) => {
-        const isMath = /math|matem/i.test(String(subject || ''));
+        const isMath = /math|matem|geomet|statis|estad|calcul/i.test(String(subject || ''));
         if (!isMath) return { found: false, reason: 'not_math', data: null };
 
         // Diagnóstico: si la hoja no cargó, avísalo claro
