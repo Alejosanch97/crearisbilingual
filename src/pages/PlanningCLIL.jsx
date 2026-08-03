@@ -510,15 +510,44 @@ Genera exactamente ${sessions} objeto(s) en el array.`;
 };
 
 /* Prompt COMPACTO exclusivo para PR1ME Math (mínimos tokens de entrada) */
-const buildPrimePrompt = ({ sessionsContext, sessionsCount, subject, grade, term, methodology, primeCollection, primePart, lessonFlow, problemSteps }) => {
+/* Prompt PR1ME: estructura de 8 pasos PR1ME + listas curriculares para que la IA
+   elija ODS, estándar, DBA, principio, dimensión y valor (como el prompt genérico) */
+const buildPrimePrompt = ({ sessionsContext, sessionsCount, subject, grade, term, methodology, primeCollection, primePart, lessonFlow, problemSteps, mallaCtx, syllabusJson }) => {
     const methodLine = methodology
         ? `Selected methodology: ${methodology.name}.`
         : 'Use the institutional methodology.';
+
+    // Listas curriculares (las mismas fuentes que usa el prompt genérico)
+    const dbaList = (mallaCtx?.dbas || []).slice(0, 6).join('\n- ');
+    const sdgList = (mallaCtx?.sdgs || []).join('\n- ');
+    const stdList = (mallaCtx?.standards || []).join('\n- ');
+    const syl = extractFromSyllabus(syllabusJson);
+    const principlesList = syl.principleNames.join(', ');
+    const dimensionsList = DIMENSIONS.join(', ');
+    const valuesList = VALUES.join(', ');
 
     return `You are Lumi, an expert PR1ME Mathematics lesson designer for Colegio CREAR (bilingual, Colombia). Respond ENTIRELY in ENGLISH. Create ${sessionsCount} distinct high-quality session(s).
 
 Subject: ${subject} | Grade: ${grade} | Term: ${term}
 PR1ME collection: "${primeCollection}" (${primePart}). ${methodLine}
+
+=== TERM DBAs (pick a real one for "DBA_Reference") ===
+- ${dbaList || 'DBA #1'}
+
+=== TERM SDGs (copy EXACTLY one into "SDG_Connection") ===
+- ${sdgList || 'SDG 4: Quality Education'}
+
+=== TERM STANDARDS (copy EXACTLY one into "Standard") ===
+- ${stdList || 'NUMERICAL THINKING AND NUMBER SYSTEMS'}
+
+=== CREAR PRINCIPLES (copy EXACTLY one name into "Principle") ===
+${principlesList || 'Cuidado, Responsabilidad, Excelencia, Amor por el aprendizaje, Relaciones sanas y armoniosas'}
+
+=== DIMENSIONS (copy EXACTLY one into "Dimension") ===
+${dimensionsList}
+
+=== VALUES (copy EXACTLY one into "Value") ===
+${valuesList}
 
 === "The Hook" — MUST follow EXACTLY these 8 PR1ME steps, each as "Paso N: [Short Title]: [2-3 sentence concrete activity adapted to the session topic]" ===
 Paso 1: Let's Remember: activate prior knowledge tied to the topic.
@@ -530,13 +559,19 @@ Paso 6: Let's Do: teacher guides worked examples.
 Paso 7: Let's Practice: independent practice or a reinforcement game.
 Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→Answer→Check→+Plus) + short reflection.
 
-=== RULES ===
+=== RULES (fill EVERY field, none empty except the two noted) ===
 - Anchor each session to the official PR1ME objectives provided per block; do NOT invent content outside PR1ME.
+- "DBA_Reference", "SDG_Connection", "Standard", "Principle", "Dimension", "Value": choose EXACTLY one from the lists above, copied literally. Never leave them empty.
 - "Vocabulary Big 5": exactly 5 comma-separated keywords.
 - "Thinking Skill": 1-2 from: applying, evaluating, analyzing, understanding.
 - "Assessment_Dimension": one of "Saber y Pensar (45%)", "Hacer e Innovar (45%)", "Ser y Sentir (10%)".
-- Leave "Activity Link" and "Richmond Resources" as "". The teacher adds them.
+- "Evaluation_Instrument": a concrete formative instrument (e.g. Exit Ticket, Rúbrica, Quiz, Observación directa).
+- "Language Frame": 2-3 sentence starters students use, tied to the topic.
+- "Thinking Routine": name a routine AND briefly develop it inside a step.
+- "Parent Task" and "Weekly Challenge": concrete, tied to the topic.
+- "Methodology": ${methodology ? methodology.name : 'the institutional methodology'}.
 - "Inclusion_Adjustments": exactly 3 short adjustments (DUA/PIAR).
+- Leave ONLY "Activity Link" and "Richmond Resources" as "". The teacher adds them.
 - "Feedback_Questions": exactly 5 objects, each { "q", "opts":[4 short options], "correct": index 0-3 }. Vary the correct position.
 
 === OUTPUT (JSON ONLY, no markdown, no extra text) ===
@@ -544,8 +579,6 @@ Return an array of EXACTLY ${sessionsCount} object(s), one per SESSION block bel
 {"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":[{"q":"","opts":["","","",""],"correct":0}]}
 
 "Learning_Evidence": "product" = tangible student output; "phases" = 3 moments (inicio/desarrollo/cierre) each with action, collect, criteria.
-"Language Frame": sentence starters students use, tied to the topic.
-"Thinking Routine": name it AND briefly develop it inside a step.
 
 === SESSIONS (one object each, keep separate) ===
 ${sessionsContext}`;
@@ -993,6 +1026,7 @@ export const PlanningCLIL = ({ userData }) => {
         pushLumi(`🧠 Diseñando tus ${primeSessions.length} sesión(es) PR1ME Math… dame unos segundos.`, 400);
 
         const methodology = METHODOLOGIES.find(m => m.id === selMethodology);
+        const syllabusJson = lumiCtx?.syllabus ? safeParse(lumiCtx.syllabus.Summary_JSON) : null;
 
         // Contexto por sesión: SOLO lo esencial (tema, unidad, objetivos oficiales, meta del profe)
         const sessionsContext = primeSessions.map((sess, idx) => {
@@ -1007,6 +1041,7 @@ Teacher goal: ${pv.goal}`;
         const first = buildPrimeValuesFor(primeSessions[0]);
 
         // Prompt COMPACTO exclusivo para PR1ME (no usa buildMasterPrompt → mínimos tokens)
+        // Prompt PR1ME: estructura PR1ME + listas curriculares (para llenar ODS, estándar, DBA, etc.)
         const fullPrompt = buildPrimePrompt({
             sessionsContext,
             sessionsCount: primeSessions.length,
@@ -1018,6 +1053,8 @@ Teacher goal: ${pv.goal}`;
             primePart: first.primePart,
             lessonFlow: first.primeLessonStructure,
             problemSteps: first.primeProblemSteps,
+            mallaCtx: lumiCtx?.ctx,
+            syllabusJson,
         });
 
         try {
