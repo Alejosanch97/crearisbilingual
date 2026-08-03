@@ -572,13 +572,16 @@ Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→
 - "Methodology": ${methodology ? methodology.name : 'the institutional methodology'}.
 - "Inclusion_Adjustments": exactly 3 short adjustments (DUA/PIAR).
 - Leave ONLY "Activity Link" and "Richmond Resources" as "". The teacher adds them.
-- "Feedback_Questions": exactly 5 objects, each { "q", "opts":[4 short options], "correct": index 0-3 }. Vary the correct position.
+- "Feedback_Questions": you MUST generate EXACTLY 5 question objects (not fewer), each { "q", "opts":[exactly 4 short options], "correct": index 0-3 }. Vary the correct position across the 5 questions. A session with fewer than 5 questions is INVALID.
 
 === OUTPUT (JSON ONLY, no markdown, no extra text) ===
 Return an array of EXACTLY ${sessionsCount} object(s), one per SESSION block below, in order. Each object with these keys:
 {"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":[{"q":"","opts":["","","",""],"correct":0}]}
 
 "Learning_Evidence": "product" = tangible student output; "phases" = 3 moments (inicio/desarrollo/cierre) each with action, collect, criteria.
+
+=== FINAL CHECK BEFORE RESPONDING ===
+Every session object MUST have all fields filled and MUST contain EXACTLY 5 items in "Feedback_Questions". Do not stop at 1 question — write all 5.
 
 === SESSIONS (one object each, keep separate) ===
 ${sessionsContext}`;
