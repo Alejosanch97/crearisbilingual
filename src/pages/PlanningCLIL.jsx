@@ -1559,7 +1559,13 @@ Teacher goal: ${pv.goal}`;
         // A) Mapeo de entradas creadas por el docente
         const formattedEntries = Object.values(formsData).map(entry => {
             const { _mallaCtx, _feedbackQuestions, Interactive_Feedback, ...rest } = entry;
-            const questions = (_feedbackQuestions || []).filter(q => q && q.trim() !== "");
+            const questions = (_feedbackQuestions || []).filter(q => {
+                if (!q) return false;
+                // Pregunta antigua = string; pregunta nueva = objeto { q, opts, correct }
+                if (typeof q === 'string') return q.trim() !== "";
+                if (typeof q === 'object') return String(q.q || '').trim() !== "";
+                return false;
+            });
             const base = {
                 ...JSON.parse(JSON.stringify(rest)),
                 "Thinking Skill": Array.isArray(entry["Thinking Skill"]) ? entry["Thinking Skill"].join(", ") : entry["Thinking Skill"],
