@@ -607,9 +607,20 @@ const parseGeminiSessions = (raw) => {
     if (!parsed) return null;
     if (Array.isArray(parsed)) return parsed;
     if (parsed && typeof parsed === 'object') {
-        const arrKey = Object.keys(parsed).find(k => Array.isArray(parsed[k]));
-        return arrKey ? parsed[arrKey] : [parsed];
-    } // por si devuelve un solo objeto
+        // Prioridad 1: clave "sessions" explícita (lo que pide el system prompt de GROQ/MISTRAL)
+        if (Array.isArray(parsed.sessions)) return parsed.sessions;
+        // Prioridad 2: cualquier clave que sea un array DE SESIONES (objetos con "Topic")
+        const sessionKey = Object.keys(parsed).find(k =>
+            Array.isArray(parsed[k]) &&
+            parsed[k].length > 0 &&
+            parsed[k][0] &&
+            typeof parsed[k][0] === 'object' &&
+            ('Topic' in parsed[k][0] || 'The Hook' in parsed[k][0] || 'Objective' in parsed[k][0])
+        );
+        if (sessionKey) return parsed[sessionKey];
+        // Prioridad 3: es un objeto de UNA sola sesión → envuélvelo
+        return [parsed];
+    }
     return null;
 };
 
