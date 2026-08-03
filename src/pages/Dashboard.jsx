@@ -10,6 +10,7 @@ import { LumiCard } from './LumiCard';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxIgwbIuGymDkRREiidM0lJYZRi5KdKS217_inoU751zp_x3EAzzxcljjNHSxZc34zBxQ/exec';
 
+// Hojas divididas por prioridad de carga (ver fetchAllSheets)
 const SHEETS = [
     "Teachers_Users",
     "Activities_Calendar",
@@ -163,20 +164,40 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     const fetchAllSheets = async () => {
         setIsLoading(true);
-        const result = {};
+
+        // TANDA 1: lo mínimo para pintar el perfil de inmediato
+        const criticas = ["Teachers_Users", "Weekly_Challenges", "Activities_Calendar"];
         try {
+            const result1 = {};
             await Promise.all(
-                SHEETS.map(async (sheet) => {
+                criticas.map(async (sheet) => {
                     const resp = await fetch(`${API_URL}?sheet=${sheet}`);
                     const data = await resp.json();
-                    result[sheet] = Array.isArray(data) ? data : [];
+                    result1[sheet] = Array.isArray(data) ? data : [];
                 })
             );
-            setExcelData(result);
+            setExcelData(prev => ({ ...prev, ...result1 }));
         } catch (e) {
-            console.error("Error loading Excel sheets:", e);
+            console.error("Error cargando hojas críticas:", e);
         }
+        // La pantalla ya se puede mostrar aquí, sin esperar lo pesado
         setIsLoading(false);
+
+        // TANDA 2: lo pesado, en segundo plano (no bloquea la interfaz)
+        const secundarias = ["Lesson_Planners", "Class_Observations", "Activity_Details_Form"];
+        try {
+            const result2 = {};
+            await Promise.all(
+                secundarias.map(async (sheet) => {
+                    const resp = await fetch(`${API_URL}?sheet=${sheet}`);
+                    const data = await resp.json();
+                    result2[sheet] = Array.isArray(data) ? data : [];
+                })
+            );
+            setExcelData(prev => ({ ...prev, ...result2 }));
+        } catch (e) {
+            console.error("Error cargando hojas secundarias:", e);
+        }
     };
 
     // 1. CORRECCIÓN DE LÓGICA DE PROGRESO (Semáforo)

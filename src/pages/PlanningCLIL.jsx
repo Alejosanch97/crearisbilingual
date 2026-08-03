@@ -670,7 +670,7 @@ export const PlanningCLIL = ({ userData }) => {
     /* ---------- Planner original ---------- */
     const [plannings, setPlannings] = useState([]);
     const [syncQueue, setSyncQueue] = useState([]);
-    const [isSyncing, setIsSyncing] = useState(false);
+     const [isSyncing, setIsSyncing] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [summaryTab, setSummaryTab] = useState('resumen');
     const [selectedGame, setSelectedGame] = useState('');
