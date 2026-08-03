@@ -3373,6 +3373,12 @@
     background-color: #fff;
 }
 
+.ai-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+.ai-status.ready { background: #ecfdf5; color: #059669; }
+.ai-status.wait  { background: #fffbeb; color: #d97706; }
+.ai-status .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.ai-status.ready .ai-dot { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 @media (max-width: 600px) {
   .review-dates { grid-template-columns: 1fr; }

@@ -387,11 +387,11 @@ const buildMasterPrompt = ({ promptDef, values, sessions, subject, grade, term, 
         userRequest = userRequest.replace(new RegExp('\\{' + f.key + '\\}', 'g'), values[f.key] || '');
     });
 
-    const dbaList = (mallaCtx?.dbas || []).slice(0, 6).join('\n- ');
-    const objList = (mallaCtx?.objectives || []).join('\n- ');
-    const sdgList = (mallaCtx?.sdgs || []).join('\n- ');
-    const stdList = (mallaCtx?.standards || []).join('\n- ');
-    const contentList = (mallaCtx?.contents || []).join('\n- ');
+    const dbaList = (mallaCtx?.dbas || []).slice(0, 3).join('\n- ');
+    const objList = (mallaCtx?.objectives || []).slice(0, 4).join('\n- ');
+    const sdgList = (mallaCtx?.sdgs || []).slice(0, 4).join('\n- ');
+    const stdList = (mallaCtx?.standards || []).slice(0, 3).join('\n- ');
+    const contentList = (mallaCtx?.contents || []).slice(0, 3).join('\n- ');
     const stepsList = (mallaCtx?.steps || []).join('\n');
     const syl = extractFromSyllabus(syllabusJson);
     const principlesList = syl.principleNames.join(', ');
@@ -453,59 +453,20 @@ ${inclusionList}
 === SOLICITUD DEL DOCENTE ===
 ${userRequest}
 
-=== REGLAS DE DISEÑO ===
-1. El desarrollo de clase (campo "The Hook") DEBE seguir los 8 pasos institucionales listados arriba, pero cada paso debe contener una ACTIVIDAD CONCRETA Y DETALLADA (qué hace el docente, qué hacen los estudiantes, qué se dice o pregunta), NO solo el título del paso. Cada paso debe tener entre 2 y 4 frases describiendo la acción real en el aula. Escribe cada paso en este formato exacto para que la interfaz lo separe bien: "Paso 1: [Título corto]: [descripción de la actividad]". Solo incluye el método Singapur (Concreto → Pictórico → Abstracto) dentro del paso de aplicación SI la materia es de contenido lógico-matemático o científico; para materias socioemocionales, de lenguaje o sociales, reemplázalo por una secuencia de aplicación coherente con la metodología seleccionada (por ejemplo, vivencia → reflexión → transferencia).
-2. NO inventes ni copies enlaces de videos, imágenes o recursos web. Deja "Activity Link" y "Richmond Resources" como cadena vacía "". El docente los agrega manualmente.
-3. Ancla cada sesión a un DBA real de la lista, un objetivo oficial, y una dimensión SIEE (Saber y Pensar 45%, Hacer e Innovar 45%, Ser y Sentir 10%). Para "SDG_Connection" usa EXACTAMENTE uno de los ODS listados arriba, copiado literal. No inventes otros ODS.
-4. El vocabulario "Vocabulary Big 5" debe tener exactamente 5 palabras clave separadas por comas.
-5. Para "Thinking Skill" elige 1 o 2 habilidades EXACTAMENTE de esta lista (cópialas literal, separadas por coma, sin inventar otras): ${skillsList}
-6. Elige EXACTAMENTE uno de cada lista para: "Standard" (de los estándares), "Dimension" (de las dimensiones), "Principle" (de los principios, solo el nombre antes de los dos puntos) y "Value" (de los valores). Cópialos literal, sin inventar.
-7. Los 8 pasos del "The Hook" DEBEN construirse APLICANDO la metodología seleccionada como principio organizador de cada actividad, no como etiqueta. Ella define QUÉ actividad ocurre en cada paso. Guía: CLIL → andamiaje lingüístico (input/output guiado); Significativo → activar saberes previos; ABP/PBL → investigar, producir, socializar; Cooperativo → roles e interdependencia; Experiencial → experiencia, reflexión, aplicación; Visible Thinking → rutinas guiadas paso a paso; Maker/STEAM → prototipado interdisciplinar; Gamificación → puntos, niveles, retos; Neuropedagogía → pausas activas y consolidación; Socioemocional → identificar/regular emociones, dinámicas vivenciales, role-play, reflexión; Storytelling → hilo narrativo continuo.
-7b. La rutina de "Thinking Routine" NO puede quedar solo como nombre: desarróllala dentro del paso donde mejor encaje (activación o desarrollo), escribiendo sus movimientos concretos con las preguntas o consignas que da el docente, conectados al tema de la sesión.
-8. Dentro de los pasos incluye, donde sea pertinente, ajustes razonables de inclusión (DUA/PIAR) marcados con el prefijo "[Inclusión]" para estudiantes con necesidades específicas.
-9. Para "Learning_Evidence" describe la evidencia concreta y observable del aprendizaje, con esta estructura de fases.
+=== REGLAS ===
+1. "The Hook": sigue los 8 pasos institucionales. Cada paso en formato "Paso N: [Título]: [2-4 frases con la actividad concreta: qué hace el docente, qué hacen los estudiantes]". Aplica la metodología seleccionada como organizador de cada paso. Incluye la Thinking Routine desarrollada dentro de un paso. Solo usa Concreto→Pictórico→Abstracto si la materia es matemática/científica.
+2. Deja "Activity Link" y "Richmond Resources" como "". No inventes enlaces.
+3. Copia LITERAL uno de cada lista de arriba para: DBA_Reference, SDG_Connection, Standard, Dimension, Principle (solo el nombre), Value. No inventes.
+4. "Vocabulary Big 5": exactamente 5 palabras separadas por coma.
+5. "Thinking Skill": 1-2 de: ${skillsList}
+6. "Inclusion_Adjustments": 3 de: ${inclusionList}
+7. "Assessment_Dimension": una de Saber y Pensar (45%) / Hacer e Innovar (45%) / Ser y Sentir (10%).
 
-=== FORMATO DE RESPUESTA (OBLIGATORIO) ===
-Devuelve ÚNICAMENTE un array JSON válido (sin texto adicional, sin markdown). Cada elemento es una sesión con EXACTAMENTE estas claves:
-[
-  {
-    "Topic": "",
-    "Objective": "",
-    "The Hook": "",
-    "Vocabulary Big 5": "",
-    "Thinking Skill": "",
-    "Language Frame": "",
-    "Thinking Routine": "",
-    "Parent Task": "",
-    "Weekly Challenge": "",
-    "DBA_Reference": "",
-    "SDG_Connection": "",
-    "Assessment_Dimension": "",
-    "Evaluation_Instrument": "",
-    "Standard": "",
-    "Dimension": "",
-    "Principle": "",
-    "Value": "",
-    "Methodology": "",
-    "Inclusion_Adjustments": ["", "", ""],
-    "Learning_Evidence": {
-      "product": "",
-      "phases": [
-        { "moment": "", "action": "", "collect": "", "criteria": "" }
-      ]
-    },
-    "Session_Number": "",
-    "Feedback_Questions": [
-      { "q": "", "opts": ["", "", "", ""], "correct": 0 }
-    ]
-  }
-]
-Para "Learning_Evidence": "product" es el producto tangible que entrega el estudiante; "phases" son 3 momentos de la clase donde se recoge evidencia, cada uno con "moment" (inicio/desarrollo/cierre), "action" (qué hace el estudiante), "collect" (cómo lo recoge el docente) y "criteria" (qué indica logro).
-Para "Inclusion_Adjustments" lista 3 estrategias tomadas EXACTAMENTE de las disponibles arriba.
-Para "Feedback_Questions" genera exactamente 5 objetos de pregunta para jugar al cierre de la clase, en el mismo idioma de la planeación. Cada objeto tiene:
-- "q": la pregunta de comprensión sobre el tema de la sesión.
-- "opts": exactamente 4 opciones de respuesta cortas (máximo 6 palabras cada una), plausibles y del nivel del grado.
-- "correct": el índice (0, 1, 2 o 3) de la opción correcta dentro de "opts". Varía la posición de la correcta entre preguntas.
+=== FORMATO (JSON ONLY, sin markdown) ===
+Devuelve un array de EXACTAMENTE ${sessions} objeto(s), cada uno con estas claves:
+{"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":[{"q":"","opts":["","","",""],"correct":0}]}
+Learning_Evidence: product = producto tangible; phases = 3 momentos (inicio/desarrollo/cierre) con action, collect, criteria.
+Feedback_Questions: EXACTAMENTE 5 objetos, cada uno con q, opts (4 opciones cortas), correct (índice 0-3, varía la posición).
 Genera exactamente ${sessions} objeto(s) en el array.`;
 };
 
@@ -667,6 +628,8 @@ export const PlanningCLIL = ({ userData }) => {
     const [primeSessions, setPrimeSessions] = useState([]);
     const [primeNumSessions, setPrimeNumSessions] = useState(0);
 
+    const [aiCooldown, setAiCooldown] = useState(0);
+
     /* ---------- Planner original ---------- */
     const [plannings, setPlannings] = useState([]);
     const [syncQueue, setSyncQueue] = useState([]);
@@ -716,6 +679,12 @@ export const PlanningCLIL = ({ userData }) => {
         const t2 = setTimeout(scrollToEnd, 400);
         return () => { clearTimeout(t1); clearTimeout(t2); };
     }, [messages, lumiTyping, lumiStage]);
+
+    useEffect(() => {
+        if (aiCooldown <= 0) return;
+        const t = setInterval(() => setAiCooldown(s => (s > 0 ? s - 1 : 0)), 1000);
+        return () => clearInterval(t);
+    }, [aiCooldown]);
 
     /* Trae las revisiones de planeación hechas por coordinación */
     const fetchPlanReviews = async () => {
@@ -1167,6 +1136,7 @@ Teacher goal: ${pv.goal}`;
             }
 
             setGenSessions(normalized);
+            setAiCooldown(45);
             pushLumi(`✨ ¡Listo! Diseñé ${normalized.length} sesión(es) PR1ME. Revísalas abajo, edita lo que quieras y guárdalas.`, 500);
             setLumiStage('review');
         } catch (e) {
@@ -1281,6 +1251,7 @@ Teacher goal: ${pv.goal}`;
             // normalizar: asegurar campos y numeración
             const normalized = sessionsArr.slice(0, sessions).map((s, i) => normalizeGenSession(s, i));
             setGenSessions(normalized);
+            setAiCooldown(45);
             pushLumi(`✨ ¡Listo! Diseñé ${normalized.length} sesión(es). Revísalas abajo, edita lo que quieras y guárdalas.`, 500);
             setLumiStage('review');
         } catch (e) {
@@ -1769,6 +1740,10 @@ Teacher goal: ${pv.goal}`;
                             <div><strong>Lumi</strong><span className="lumi-status">{lumiTyping ? 'escribiendo…' : 'en línea'}</span></div>
                         </div>
                         <div className="lumi-ctx-pill">{selSubject ? `${selSubject} · ${selGrade}` : 'Nueva planeación'}</div>
+                        <div className={`ai-status ${aiCooldown > 0 ? 'wait' : 'ready'}`}>
+                            <span className="ai-dot" />
+                            {aiCooldown > 0 ? `Óptimo en ${aiCooldown}s` : 'IA lista ⚡'}
+                        </div>
                     </div>
 
                     <div className="lumi-chat-stream">
