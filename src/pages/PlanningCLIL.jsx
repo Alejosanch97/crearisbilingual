@@ -722,16 +722,24 @@ export const PlanningCLIL = ({ userData }) => {
     const fetchCurriculum = async () => {
         setLoadingCurriculum(true);
         try {
+            // Cada fetch con su propio .catch → si UNO falla, no tumba a los demás
             const [mapsResp, syllResp, primeResp] = await Promise.all([
-                fetch(`${API_URL}?sheet=Curriculum_Maps`).then(r => r.json()),
-                fetch(`${API_URL}?sheet=Syllabus_Templates`).then(r => r.json()),
+                fetch(`${API_URL}?sheet=Curriculum_Maps`).then(r => r.json()).catch(() => []),
+                fetch(`${API_URL}?sheet=Syllabus_Templates`).then(r => r.json()).catch(() => []),
                 fetch(`${API_URL}?sheet=Prime_Math`).then(r => r.json()).catch(() => []),
             ]);
             setCurriculumMaps(Array.isArray(mapsResp) ? mapsResp : []);
             setSyllabusTemplates(Array.isArray(syllResp) ? syllResp : []);
             setPrimeMathMaps(Array.isArray(primeResp) ? primeResp : []);
-        } catch (e) { console.error("Error cargando currículo:", e); }
-        setLoadingCurriculum(false);
+            console.log('[CURRICULO] maps:', Array.isArray(mapsResp) ? mapsResp.length : 'no-array',
+                        '| syllabus:', Array.isArray(syllResp) ? syllResp.length : 'no-array',
+                        '| prime:', Array.isArray(primeResp) ? primeResp.length : 'no-array');
+        } catch (e) {
+            console.error("Error cargando currículo:", e);
+        } finally {
+            // SIEMPRE se ejecuta → el botón nunca se queda pegado en "Cargando currículo…"
+            setLoadingCurriculum(false);
+        }
     };
 
     /* Normaliza grados: acepta "FIRST GRADE", "1", "GRADO 1", "PRIMERO"... y los lleva a un número */
@@ -2130,7 +2138,6 @@ Teacher goal: ${pv.goal}`;
                                             ["Principle", "Principio CREAR", "principle"], ["Value", "Valor", "value"],
                                             ["Assessment_Dimension", "Dimensión SIEE", "assessment"], ["Evaluation_Instrument", "Instrumento", "instrument"],
                                         ].map(([field, label, kind]) => {
-                                            // Opciones para los campos que son lista
                                             const OPTS = {
                                                 dimension: DIMENSIONS,
                                                 value: VALUES,
@@ -2148,7 +2155,6 @@ Teacher goal: ${pv.goal}`;
                                                     ) : isSelect ? (
                                                         <select value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)}>
                                                             <option value="">Selecciona…</option>
-                                                            {/* Si Lumi trajo un valor que no está en la lista, lo mostramos igual */}
                                                             {s[field] && !isSelect.includes(s[field]) && <option value={s[field]}>{s[field]}</option>}
                                                             {isSelect.map(o => <option key={o} value={o}>{o}</option>)}
                                                         </select>
