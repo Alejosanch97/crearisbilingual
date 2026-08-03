@@ -573,7 +573,7 @@ export const PlanningCLIL = ({ userData }) => {
     const [primeUnitIdx, setPrimeUnitIdx] = useState('');       // índice de la unidad elegida
     const [primeSelectedSubs, setPrimeSelectedSubs] = useState([]); // ids de subunidades elegidas
     const [primeError, setPrimeError] = useState('');
-    const [primeParts, setPrimeParts] = useState([]); 
+    const [primeParts, setPrimeParts] = useState([]);
 
     const [primeSessions, setPrimeSessions] = useState([]);
     const [primeNumSessions, setPrimeNumSessions] = useState(0);
@@ -704,13 +704,21 @@ export const PlanningCLIL = ({ userData }) => {
         return { ok: true, data };
     };
 
+    /* Materias que comparten la malla/plan de área de MATH */
+    const mathFamily = (subject) => /math|matem|geomet|statis|estad|calcul/i.test(String(subject || ''));
+
     const resolveCurriculum = (subject, grade, term) => {
+        // Si es GEOMETRY/STATISTICS/etc., también aceptamos filas de MATH como respaldo
+        const subjectMatches = (rowSubject) =>
+            norm(rowSubject) === norm(subject) ||
+            (mathFamily(subject) && mathFamily(rowSubject));
+
         const malla =
-            curriculumMaps.find(m => norm(m.Subject) === norm(subject) && norm(m.Grade) === norm(grade) && norm(m.Term) === norm(term))
-            || curriculumMaps.find(m => norm(m.Subject) === norm(subject) && norm(m.Grade) === norm(grade));
+            curriculumMaps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade) && norm(m.Term) === norm(term))
+            || curriculumMaps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade));
         const syllabus =
-            syllabusTemplates.find(s => norm(s.Subject) === norm(subject) && norm(s.Grade) === norm(grade))
-            || syllabusTemplates.find(s => norm(s.Subject) === norm(subject));
+            syllabusTemplates.find(s => subjectMatches(s.Subject) && norm(s.Grade) === norm(grade))
+            || syllabusTemplates.find(s => subjectMatches(s.Subject));
         const ctx = malla ? extractFromMalla(malla.Content_JSON, term) : { dbas: [], standards: [], sdgs: [], objectives: [], contents: [], steps: [], challenge: '', raw: null };
         return { malla, syllabus, ctx };
     };
