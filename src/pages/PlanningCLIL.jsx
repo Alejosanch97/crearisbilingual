@@ -793,11 +793,20 @@ export const PlanningCLIL = ({ userData }) => {
     /* Materias que comparten la malla/plan de área de MATH */
     const mathFamily = (subject) => /math|matem|geomet|statis|estad|calcul/i.test(String(subject || ''));
 
-    const resolveCurriculum = (subject, grade, term) => {
+   const resolveCurriculum = (subject, grade, term) => {
         // Si es GEOMETRY/STATISTICS/etc., también aceptamos filas de MATH como respaldo
         const subjectMatches = (rowSubject) =>
             norm(rowSubject) === norm(subject) ||
             (mathFamily(subject) && mathFamily(rowSubject));
+
+        // LOG temporal para diagnosticar por qué no encuentra la malla
+        console.log('[RESOLVE] Buscando:', { subject: norm(subject), grade: norm(grade), term: norm(term) });
+        console.log('[RESOLVE] curriculumMaps tiene', curriculumMaps.length, 'filas');
+        if (curriculumMaps.length) {
+            console.log('[RESOLVE] Filas que coinciden en Subject:',
+                curriculumMaps.filter(m => subjectMatches(m.Subject))
+                    .map(m => ({ Subject: norm(m.Subject), Grade: norm(m.Grade), Term: norm(m.Term) })));
+        }
 
         const malla =
             curriculumMaps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade) && norm(m.Term) === norm(term))
