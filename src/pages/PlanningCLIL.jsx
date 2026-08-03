@@ -401,6 +401,11 @@ const buildMasterPrompt = ({ promptDef, values, sessions, subject, grade, term, 
     const inclusionList = INCLUSION_STRATEGIES.join(', ');
     const dimensionsList = DIMENSIONS.join(', ');
     const valuesList = VALUES.join(', ');
+    // Muestra de sentence starters (2 por categoría) para orientar el Language Frame
+    const framesList = Object.entries(CLIL_RESOURCES.languageFrames)
+        .map(([cat, arr]) => `${cat}: ${arr.slice(0, 2).join(' / ')}`).join(' | ');
+    // Muestra de rutinas de pensamiento disponibles
+    const routinesList = (CLIL_RESOURCES.thinkingRoutines || []).slice(0, 8).join(', ');
 
     return `Eres Lumi, un asistente experto en diseño pedagógico CLIL para el Colegio CREAR (Colombia). Tu tarea es crear ${sessions} sesión(es) de clase de altísima calidad, ancladas en el currículo oficial.
 
@@ -453,14 +458,18 @@ ${inclusionList}
 === SOLICITUD DEL DOCENTE ===
 ${userRequest}
 
-=== REGLAS ===
+=== REGLAS (LLENA TODOS los campos, ninguno vacío salvo los 2 indicados) ===
 1. "The Hook": sigue los 8 pasos institucionales. Cada paso en formato "Paso N: [Título]: [2-4 frases con la actividad concreta: qué hace el docente, qué hacen los estudiantes]". Aplica la metodología seleccionada como organizador de cada paso. Incluye la Thinking Routine desarrollada dentro de un paso. Solo usa Concreto→Pictórico→Abstracto si la materia es matemática/científica.
-2. Deja "Activity Link" y "Richmond Resources" como "". No inventes enlaces.
+2. Deja SOLO "Activity Link" y "Richmond Resources" como "". No inventes enlaces.
 3. Copia LITERAL uno de cada lista de arriba para: DBA_Reference, SDG_Connection, Standard, Dimension, Principle (solo el nombre), Value. No inventes.
 4. "Vocabulary Big 5": exactamente 5 palabras separadas por coma.
 5. "Thinking Skill": 1-2 de: ${skillsList}
-6. "Inclusion_Adjustments": 3 de: ${inclusionList}
-7. "Assessment_Dimension": una de Saber y Pensar (45%) / Hacer e Innovar (45%) / Ser y Sentir (10%).
+6. "Language Frame": OBLIGATORIO. Genera 2-3 sentence starters (estructuras de lenguaje) que los estudiantes usarán en clase, adaptados al tema y al idioma de la planeación. Sepáralos con " / ". Guíate por estos ejemplos: ${framesList}
+7. "Thinking Routine": OBLIGATORIO. Elige y nombra una rutina de pensamiento (ej: ${routinesList}) y desarróllala brevemente dentro de un paso de The Hook.
+8. "Weekly Challenge": OBLIGATORIO. Un reto semanal motivador ligado al tema.
+9. "Evaluation_Instrument": OBLIGATORIO. Un instrumento formativo concreto (ej: Exit Ticket, Rúbrica, Quiz, Observación directa).
+10. "Inclusion_Adjustments": exactamente 3 de: ${inclusionList}
+11. "Assessment_Dimension": una de Saber y Pensar (45%) / Hacer e Innovar (45%) / Ser y Sentir (10%).
 
 === FORMATO (JSON ONLY, sin markdown) ===
 Devuelve un array de EXACTAMENTE ${sessions} objeto(s), cada uno con estas claves:
@@ -686,6 +695,18 @@ export const PlanningCLIL = ({ userData }) => {
         return () => clearInterval(t);
     }, [aiCooldown]);
 
+    // Avisar si intenta recargar/cerrar la pestaña con una planeación sin guardar
+    useEffect(() => {
+        const handler = (e) => {
+            if (genSessions && genSessions.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [genSessions]);
+
     /* Trae las revisiones de planeación hechas por coordinación */
     const fetchPlanReviews = async () => {
         try {
@@ -696,6 +717,67 @@ export const PlanningCLIL = ({ userData }) => {
             }
         } catch (e) { console.error("Error cargando revisiones:", e); }
     };
+
+    // Restaurar planeación generada no guardada (sobrevive a cambios de pantalla / atrás)
+    // Restaurar TODA la sesión de Lumi (chat completo) al volver de otra pestaña
+    const [lumiRestored, setLumiRestored] = useState(false);
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('lumi_chat_state');
+            if (saved) {
+                const st = JSON.parse(saved);
+                // Solo restauramos si de verdad había una sesión de Lumi en curso
+                if (st && st.view === 'lumi' && st.lumiStage && st.lumiStage !== 'welcome') {
+                    if (st.view) setView(st.view);
+                    if (st.lumiStage) setLumiStage(st.lumiStage);
+                    if (Array.isArray(st.messages)) setMessages(st.messages);
+                    if (st.selSubject) setSelSubject(st.selSubject);
+                    if (st.selGrade) setSelGrade(st.selGrade);
+                    if (st.selTerm) setSelTerm(st.selTerm);
+                    if (st.selectedPromptId) setSelectedPromptId(st.selectedPromptId);
+                    if (st.promptValues) setPromptValues(st.promptValues);
+                    if (typeof st.numSessions === 'number') setNumSessions(st.numSessions);
+                    if (st.selMethodology) setSelMethodology(st.selMethodology);
+                    if (st.lumiCtx) setLumiCtx(st.lumiCtx);
+                    if (Array.isArray(st.genSessions)) setGenSessions(st.genSessions);
+                    // Estado PR1ME (por si estaba planeando con PR1ME)
+                    if (st.primeData) setPrimeData(st.primeData);
+                    if (st.primeChapterIdx !== undefined) setPrimeChapterIdx(st.primeChapterIdx);
+                    if (st.primeUnitIdx !== undefined) setPrimeUnitIdx(st.primeUnitIdx);
+                    if (Array.isArray(st.primeSelectedSubs)) setPrimeSelectedSubs(st.primeSelectedSubs);
+                    if (Array.isArray(st.primeParts)) setPrimeParts(st.primeParts);
+                    if (Array.isArray(st.primeSessions)) setPrimeSessions(st.primeSessions);
+                    if (typeof st.primeNumSessions === 'number') setPrimeNumSessions(st.primeNumSessions);
+                }
+            }
+        } catch (e) { console.warn('No se pudo restaurar sesión Lumi:', e); }
+        setLumiRestored(true); // marca que ya intentamos restaurar
+    }, []);
+
+    // Guardar automáticamente el borrador cada vez que hay sesiones generadas
+    // Guardar automáticamente TODO el estado del chat de Lumi mientras esté en curso
+    useEffect(() => {
+        // No guardar hasta haber intentado restaurar (evita pisar lo guardado con el estado inicial vacío)
+        if (!lumiRestored) return;
+        try {
+            // Solo guardamos si hay una sesión de Lumi activa (no en 'welcome' ni fuera de Lumi)
+            const enSesionLumi = view === 'lumi' && lumiStage && lumiStage !== 'welcome';
+            if (enSesionLumi) {
+                const st = {
+                    view, lumiStage, messages,
+                    selSubject, selGrade, selTerm,
+                    selectedPromptId, promptValues, numSessions, selMethodology,
+                    lumiCtx, genSessions,
+                    primeData, primeChapterIdx, primeUnitIdx, primeSelectedSubs,
+                    primeParts, primeSessions, primeNumSessions,
+                    savedAt: Date.now()
+                };
+                localStorage.setItem('lumi_chat_state', JSON.stringify(st));
+            }
+        } catch (e) { console.warn('No se pudo guardar sesión Lumi:', e); }
+    }, [lumiRestored, view, lumiStage, messages, selSubject, selGrade, selTerm,
+        selectedPromptId, promptValues, numSessions, selMethodology, lumiCtx, genSessions,
+        primeData, primeChapterIdx, primeUnitIdx, primeSelectedSubs, primeParts, primeSessions, primeNumSessions]);
 
     /* ================= LIMPIAR CACHÉ LOCAL ================= */
     const clearLocalCache = async () => {
@@ -852,6 +934,8 @@ export const PlanningCLIL = ({ userData }) => {
     const pushUser = (text) => setMessages(prev => [...prev, { from: 'user', text }]);
 
     const openLumi = () => {
+        // Empezamos una sesión nueva: borramos cualquier sesión de Lumi guardada
+        localStorage.removeItem('lumi_chat_state');
         setView('lumi');
         setLumiStage('welcome');
         setMessages([]);
@@ -1324,6 +1408,22 @@ Teacher goal: ${pv.goal}`;
         setGenSessions(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
     };
 
+    // Intenta salir de Lumi; si hay planeación sin guardar, confirma antes de borrar
+    const handleExitLumi = (accion) => {
+        const hayDraft = genSessions && genSessions.length > 0;
+        if (hayDraft) {
+            const ok = window.confirm(
+                '⚠️ Tienes una planeación generada que aún NO has guardado.\n\n' +
+                'Si sales ahora se perderá y tendrás que volver a generarla (gastando tokens de nuevo).\n\n' +
+                '¿Seguro que quieres salir sin guardar?'
+            );
+            if (!ok) return; // el profe se queda
+            localStorage.removeItem('lumi_chat_state');
+            setGenSessions([]);
+        }
+        if (typeof accion === 'function') accion();
+    };
+
     const acceptAndSave = async () => {
         if (!genSessions.length) { console.warn('[GUARDAR] No hay sesiones para guardar.'); return; }
         if (isSyncing) return; // evita dobles clics
@@ -1384,6 +1484,9 @@ Teacher goal: ${pv.goal}`;
         // 3. Persistir inmediatamente en localStorage para respaldar cambios
         const storedPlannings = JSON.parse(localStorage.getItem('local_plannings') || '[]');
         localStorage.setItem('local_plannings', JSON.stringify([...newSessions, ...storedPlannings]));
+
+        // 3.1 Ya se guardó de verdad: limpiar el borrador temporal de Lumi
+        localStorage.removeItem('lumi_chat_state');
 
         // 4. Feedback inmediato al chat y cambio de vista
         pushLumi('✅ ¡Guardado localmente! Sincronizando con Excel en segundo plano…', 100);
@@ -1477,7 +1580,7 @@ Teacher goal: ${pv.goal}`;
                 "The Hook": plan["The Hook"] || plan.The_Hook || "",
                 "Vocabulary Big 5": plan["Vocabulary Big 5"] || plan.Vocabulary_Big_5 || "",
                 "Thinking Skill": typeof plan["Thinking Skill"] === 'string' ? plan["Thinking Skill"].split(", ").filter(Boolean) : (plan["Thinking Skill"] || []),
-                "Language Frame": typeof plan["Language Frame"] === 'string' ? plan["Language Frame"].split(", ").filter(Boolean) : (plan["Language Frame"] || []),
+                "Language Frame": typeof plan["Language Frame"] === 'string' ? plan["Language Frame"].split(/\s*\/\s*|\s*,\s*/).filter(Boolean) : (plan["Language Frame"] || []),
                 "Thinking Routine": plan["Thinking Routine"] || plan.Thinking_Routine || "",
                 "Richmond Resources": plan["Richmond Resources"] || plan.Richmond_Resources || "",
                 "Activity Link": plan["Activity Link"] || plan.Activity_Link || "",
@@ -1734,7 +1837,7 @@ Teacher goal: ${pv.goal}`;
             {view === 'lumi' && (
                 <div className="lumi-chat-shell">
                     <div className="lumi-chat-topbar">
-                        <button className="lumi-back" onClick={() => setView('hub')}>← Volver</button>
+                        <button className="lumi-back" onClick={() => handleExitLumi(() => setView('hub'))}>← Volver</button>
                         <div className="lumi-identity">
                             <img src={LUMI_AVATAR} alt="Lumi" className="lumi-mini-av" />
                             <div><strong>Lumi</strong><span className="lumi-status">{lumiTyping ? 'escribiendo…' : 'en línea'}</span></div>
@@ -2162,7 +2265,7 @@ Teacher goal: ${pv.goal}`;
                                         {[
                                             ["Topic", "Tema", "text"], ["Objective", "Objetivo", "text"], ["The Hook", "Desarrollo (8 pasos)", "textarea"],
                                             ["Vocabulary Big 5", "Vocabulary Big 5", "text"], ["Thinking Skill", "Thinking Skill", "text"],
-                                            ["Language Frame", "Language Frame", "textarea"], ["Thinking Routine", "Thinking Routine", "routine"],
+                                            ["Language Frame", "Language Frame", "frames"], ["Thinking Routine", "Thinking Routine", "routine"],
                                             ["Parent Task", "Tarea / Parent Task", "text"], ["Weekly Challenge", "Weekly Challenge", "text"],
                                             ["DBA_Reference", "DBA", "text"], ["SDG_Connection", "ODS", "text"],
                                             ["Standard", "Estándar", "text"], ["Dimension", "Dimensión", "dimension"],
@@ -2178,10 +2281,50 @@ Teacher goal: ${pv.goal}`;
                                                 routine: CLIL_RESOURCES.thinkingRoutines,
                                             };
                                             const isSelect = OPTS[kind];
+                                            // Para Language Frame: convertir el string "a / b / c" en array de chips
+                                            const frameValues = kind === "frames"
+                                                ? String(s[field] || '').split(/\s*\/\s*|\s*,\s*/).map(v => v.trim()).filter(Boolean)
+                                                : [];
+                                            const toggleFrame = (f) => {
+                                                const set = new Set(frameValues);
+                                                set.has(f) ? set.delete(f) : set.add(f);
+                                                updateGenSession(idx, field, Array.from(set).join(' / '));
+                                            };
+                                            const allFrames = Object.values(CLIL_RESOURCES.languageFrames).flat();
+                                            const extraFrames = frameValues.filter(v => !allFrames.includes(v));
                                             return (
                                                 <div key={field} className="review-field">
                                                     <label>{label}</label>
-                                                    {kind === "textarea" ? (
+                                                    {kind === "frames" ? (
+                                                        <div className="clil-frames-picker">
+                                                            {/* Los que la IA generó y no están en la lista oficial */}
+                                                            {extraFrames.length > 0 && (
+                                                                <div className="clil-frame-group">
+                                                                    <span className="clil-frame-cat">✨ Generados por Lumi</span>
+                                                                    <div className="clil-frame-chips">
+                                                                        {extraFrames.map(v => (
+                                                                            <div key={v} className="clil-option active" onClick={() => toggleFrame(v)}>{v}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {/* La lista oficial agrupada por categoría */}
+                                                            {Object.entries(CLIL_RESOURCES.languageFrames).map(([cat, frames]) => (
+                                                                <div key={cat} className="clil-frame-group">
+                                                                    <span className="clil-frame-cat">{cat}</span>
+                                                                    <div className="clil-frame-chips">
+                                                                        {frames.map(f => (
+                                                                            <div
+                                                                                key={f}
+                                                                                className={`clil-option ${frameValues.includes(f) ? 'active' : ''}`}
+                                                                                onClick={() => toggleFrame(f)}
+                                                                            >{f}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : kind === "textarea" ? (
                                                         <textarea value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)} />
                                                     ) : isSelect ? (
                                                         <select value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)}>
