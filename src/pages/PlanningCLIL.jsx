@@ -509,6 +509,48 @@ Para "Feedback_Questions" genera exactamente 5 objetos de pregunta para jugar al
 Genera exactamente ${sessions} objeto(s) en el array.`;
 };
 
+/* Prompt COMPACTO exclusivo para PR1ME Math (mínimos tokens de entrada) */
+const buildPrimePrompt = ({ sessionsContext, sessionsCount, subject, grade, term, methodology, primeCollection, primePart, lessonFlow, problemSteps }) => {
+    const methodLine = methodology
+        ? `Selected methodology: ${methodology.name}.`
+        : 'Use the institutional methodology.';
+
+    return `You are Lumi, an expert PR1ME Mathematics lesson designer for Colegio CREAR (bilingual, Colombia). Respond ENTIRELY in ENGLISH. Create ${sessionsCount} distinct high-quality session(s).
+
+Subject: ${subject} | Grade: ${grade} | Term: ${term}
+PR1ME collection: "${primeCollection}" (${primePart}). ${methodLine}
+
+=== "The Hook" — MUST follow EXACTLY these 8 PR1ME steps, each as "Paso N: [Short Title]: [2-3 sentence concrete activity adapted to the session topic]" ===
+Paso 1: Let's Remember: activate prior knowledge tied to the topic.
+Paso 2: EXPLORE: pose a motivating problem to revisit at the end.
+Paso 3: Concrete: students use manipulatives (base-ten blocks, counters) hands-on.
+Paso 4: Pictorial: students represent with drawings/diagrams (number lines, bar models).
+Paso 5: Abstract: students write equations / number sentences / vertical form.
+Paso 6: Let's Do: teacher guides worked examples.
+Paso 7: Let's Practice: independent practice or a reinforcement game.
+Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→Answer→Check→+Plus) + short reflection.
+
+=== RULES ===
+- Anchor each session to the official PR1ME objectives provided per block; do NOT invent content outside PR1ME.
+- "Vocabulary Big 5": exactly 5 comma-separated keywords.
+- "Thinking Skill": 1-2 from: applying, evaluating, analyzing, understanding.
+- "Assessment_Dimension": one of "Saber y Pensar (45%)", "Hacer e Innovar (45%)", "Ser y Sentir (10%)".
+- Leave "Activity Link" and "Richmond Resources" as "". The teacher adds them.
+- "Inclusion_Adjustments": exactly 3 short adjustments (DUA/PIAR).
+- "Feedback_Questions": exactly 5 objects, each { "q", "opts":[4 short options], "correct": index 0-3 }. Vary the correct position.
+
+=== OUTPUT (JSON ONLY, no markdown, no extra text) ===
+Return an array of EXACTLY ${sessionsCount} object(s), one per SESSION block below, in order. Each object with these keys:
+{"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":[{"q":"","opts":["","","",""],"correct":0}]}
+
+"Learning_Evidence": "product" = tangible student output; "phases" = 3 moments (inicio/desarrollo/cierre) each with action, collect, criteria.
+"Language Frame": sentence starters students use, tied to the topic.
+"Thinking Routine": name it AND briefly develop it inside a step.
+
+=== SESSIONS (one object each, keep separate) ===
+${sessionsContext}`;
+};
+
 /* Extrae y parsea el array JSON de la respuesta cruda de Gemini */
 const parseGeminiSessions = (raw) => {
     if (!raw) return null;
@@ -950,7 +992,6 @@ export const PlanningCLIL = ({ userData }) => {
         setLumiStage('generating');
         pushLumi(`🧠 Diseñando tus ${primeSessions.length} sesión(es) PR1ME Math… dame unos segundos.`, 400);
 
-        const syllabusJson = lumiCtx?.syllabus ? safeParse(lumiCtx.syllabus.Summary_JSON) : null;
         const methodology = METHODOLOGIES.find(m => m.id === selMethodology);
 
         // Contexto por sesión: SOLO lo esencial (tema, unidad, objetivos oficiales, meta del profe)
@@ -962,60 +1003,22 @@ Official objectives: ${pv.primeObjectives.replace(/\n/g, ' ')}
 Teacher goal: ${pv.goal}`;
         }).join('\n\n');
 
-        // Contexto PR1ME compacto (una sola línea, no párrafos): colección + método C-P-A
-        // Contexto PR1ME compacto (una sola línea, no párrafos): colección + método C-P-A
+        // Datos raíz PR1ME (colección, parte, flujo) tomados de la primera sesión
         const first = buildPrimeValuesFor(primeSessions[0]);
-        const primeHeader = `PR1ME context: Collection "${first.primeCollection}" (${first.primePart}). Use the C-P-A approach (Concrete→Pictorial→Abstract) and the PR1ME lesson flow: ${first.primeLessonStructure}. For non-routine problems use: ${first.primeProblemSteps}.
 
-PR1ME 8-STEP HOOK STRUCTURE (override the generic institutional steps for these sessions). The "The Hook" field MUST follow EXACTLY these 8 steps, in this order, each written as "Paso N: [Title]: [concrete 2-3 sentence activity]":
-Paso 1: Let's Remember: activate prior knowledge with a quick review tied to the topic.
-Paso 2: EXPLORE: pose a motivating problem students will revisit at the end.
-Paso 3: Concrete: students use manipulatives (base-ten blocks, counters, etc.) to build the concept hands-on.
-Paso 4: Pictorial: students represent the concept with drawings/diagrams (number lines, bar models).
-Paso 5: Abstract: students write equations, number sentences or vertical form.
-Paso 6: Let's Do / Guided Practice: teacher guides students through worked examples.
-Paso 7: Let's Practice / Game: students practice independently or through a reinforcement game.
-Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand → Plan → Answer → Check → +Plus) followed by a short reflection.
-IMPORTANT: adapt the wording of each step to the specific topic of each session, but keep this exact 8-step skeleton and these stage names.`;
-
-        // Prompt maestro pidiendo N sesiones (mismo patrón que los otros prompts que sí funcionan)
-        const masterPrompt = buildMasterPrompt({
-            promptDef: currentPrompt,
-            values: {
-                chapterTitle: 'See per-session blocks',
-                unitTitle: 'See per-session blocks',
-                selectedTopics: 'See per-session blocks',
-                primeObjectives: 'See per-session blocks',
-                primeStages: first.primeStages,
-                primeConcepts: 'See per-session blocks',
-                goal: 'See per-session blocks',
-                primeCollection: first.primeCollection,
-                primePublisher: first.primePublisher,
-                primePart: first.primePart,
-                primeCPADesc: first.primeCPADesc,
-                primeConcreteDesc: first.primeConcreteDesc,
-                primePictorialDesc: first.primePictorialDesc,
-                primeAbstractDesc: first.primeAbstractDesc,
-                primeLessonStructure: first.primeLessonStructure,
-                primeProblemSteps: first.primeProblemSteps,
-            },
-            sessions: primeSessions.length,
+        // Prompt COMPACTO exclusivo para PR1ME (no usa buildMasterPrompt → mínimos tokens)
+        const fullPrompt = buildPrimePrompt({
+            sessionsContext,
+            sessionsCount: primeSessions.length,
             subject: selSubject,
             grade: selGrade,
             term: selTerm,
-            mallaCtx: lumiCtx?.ctx,
-            syllabusJson,
             methodology,
+            primeCollection: first.primeCollection,
+            primePart: first.primePart,
+            lessonFlow: first.primeLessonStructure,
+            problemSteps: first.primeProblemSteps,
         });
-
-        const fullPrompt = `${masterPrompt}
-
-${primeHeader}
-
-=== GENERATE EXACTLY ${primeSessions.length} DISTINCT SESSION(S) — ONE PER BLOCK BELOW (do NOT merge them) ===
-${sessionsContext}
-
-CRITICAL: Return an array of EXACTLY ${primeSessions.length} session object(s), one per SESSION block above, in order. Even if two blocks share a chapter, keep them SEPARATE.`;
 
         try {
             const resp = await fetch(API_URL, {
