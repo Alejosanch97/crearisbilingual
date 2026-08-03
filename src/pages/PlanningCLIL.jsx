@@ -717,6 +717,29 @@ export const PlanningCLIL = ({ userData }) => {
         } catch (e) { console.error("Error cargando revisiones:", e); }
     };
 
+    /* ================= LIMPIAR CACHÉ LOCAL ================= */
+    const clearLocalCache = async () => {
+        const pendientes = (() => {
+            try { return JSON.parse(localStorage.getItem('local_plannings') || '[]').length; }
+            catch { return 0; }
+        })();
+
+        const msg = pendientes > 0
+            ? `Tienes ${pendientes} planeación(es) sin sincronizar. Si limpias ahora podrías perderlas. ¿Continuar?`
+            : '¿Limpiar la caché local y recargar todo desde el backend?';
+
+        if (!window.confirm(msg)) return;
+
+        try {
+            localStorage.removeItem('local_plannings');
+            setSyncQueue([]);
+            await Promise.all([fetchData(), fetchCurriculum(), fetchPlanReviews()]);
+            alert('✅ Caché limpiada. Datos recargados desde el backend.');
+        } catch (e) {
+            console.error('Error limpiando caché:', e);
+            alert('Hubo un problema al recargar. Intenta refrescar la página.');
+        }
+    };
 
     /* ================= CURRÍCULO ================= */
     const fetchCurriculum = async () => {
@@ -1401,6 +1424,13 @@ Teacher goal: ${pv.goal}`;
                 }
                 return p;
             }));
+
+            // Limpiar de localStorage las que YA se sincronizaron (evita que se acumule y se trabe)
+            try {
+                const stored = JSON.parse(localStorage.getItem('local_plannings') || '[]');
+                const remaining = stored.filter(sp => !newSessions.some(ns => ns.ID_Setup === sp.ID_Setup));
+                localStorage.setItem('local_plannings', JSON.stringify(remaining));
+            } catch (e) { console.warn('No se pudo limpiar local_plannings:', e); }
             setSyncQueue(prev => prev.filter(q => !newSessions.some(ns => ns.ID_Setup === q.ID_Setup)));
         } catch (e) {
             console.error("Error al sincronizar con Excel en segundo plano:", e);
@@ -2271,6 +2301,7 @@ Teacher goal: ${pv.goal}`;
                         </div>
                         <div className="header-actions">
                             <button className="btn-refresh" onClick={() => { fetchData(); fetchCurriculum(); }} disabled={isSyncing} title="Recargar">{isSyncing ? "..." : "🔄 Refresh"}</button>
+                            <button className="btn-refresh" onClick={clearLocalCache} disabled={isSyncing} title="Limpiar caché local y recargar desde el backend">🧹 Limpiar caché</button>
                             {syncQueue.length > 0 && <button className="btn-sync" onClick={syncWithExcel} disabled={isSyncing}>{isSyncing ? "..." : `📤 Guardar ${syncQueue.length} en Excel`}</button>}
                             <button className="btn-main" onClick={handleOpenForm}>{showForm ? "✕ Cerrar formulario" : "＋ Nueva planeación"}</button>
                         </div>
