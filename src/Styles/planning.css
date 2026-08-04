@@ -3388,6 +3388,85 @@
 .clil-frames-picker .clil-option:hover { border-color: #94a3b8; }
 .clil-frames-picker .clil-option.active { background: #6366f1; color: #fff; border-color: #6366f1; }
 
+
+.fb-toggle { display: flex; gap: 8px; margin-top: 8px; }
+.fb-opt { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; color: #475569; }
+.fb-opt:hover { border-color: #94a3b8; }
+.fb-opt.on { background: #6366f1; color: #fff; border-color: #6366f1; }
+.fb-help { margin-top: 6px; font-size: 0.8rem; color: #64748b; line-height: 1.4; }
+
+/* Language Frames dentro de la revisión de Lumi (igual al manual) */
+.review-field .clil-box {
+    background: #eef2ff;
+    border-radius: 16px;
+    padding: 16px;
+}
+.review-field .clil-custom-add {
+    background: #fff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+.review-field .clil-custom-add input {
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 8px;
+}
+.review-field .clil-custom-add .btn-view {
+    background: #dbeafe;
+    color: #2563eb;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.review-field .clil-scroll {
+    max-height: 360px;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.review-field .clil-cat {
+    margin-bottom: 14px;
+}
+.review-field .clil-cat strong {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #6366f1;
+    text-transform: uppercase;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #eef2ff;
+}
+.review-field .clil-option {
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+}
+.review-field .clil-option:hover {
+    background: #f1f5f9;
+}
+.review-field .clil-option.active {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+    font-weight: 600;
+}
+.review-field .clil-option.active::before {
+    content: "✓ ";
+    color: #6366f1;
+    font-weight: 700;
+}
+
 @media (max-width: 600px) {
   .review-dates { grid-template-columns: 1fr; }
 }

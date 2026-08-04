@@ -377,7 +377,7 @@ const extractFromSyllabus = (syllabusJson) => {
 };
 
 /* Construye el prompt maestro que se envía a Gemini */
-const buildMasterPrompt = ({ promptDef, values, sessions, subject, grade, term, mallaCtx, syllabusJson, methodology }) => {
+const buildMasterPrompt = ({ promptDef, values, sessions, subject, grade, term, mallaCtx, syllabusJson, methodology, includeFeedback = true }) => {
     const langLine = promptDef.lang === 'en'
         ? 'IMPORTANT: Respond ENTIRELY in ENGLISH.'
         : 'IMPORTANTE: Responde COMPLETAMENTE en ESPAÑOL.';
@@ -459,30 +459,35 @@ ${inclusionList}
 ${userRequest}
 
 === REGLAS (LLENA TODOS los campos, ninguno vacío salvo los 2 indicados) ===
-1. "The Hook": sigue los 8 pasos institucionales. Cada paso en formato "Paso N: [Título]: [2-4 frases con la actividad concreta: qué hace el docente, qué hacen los estudiantes]". Aplica la metodología seleccionada como organizador de cada paso. Incluye la Thinking Routine desarrollada dentro de un paso. Solo usa Concreto→Pictórico→Abstracto si la materia es matemática/científica.
+1. "The Hook" (Desarrollo, LO MÁS IMPORTANTE): estructura la clase en EXACTAMENTE 8 pasos institucionales, cada uno como "Paso N: [Título]: [contenido]". Para CADA paso especifica de forma concreta y secuenciada: (a) qué HACE el docente, (b) qué HACEN los estudiantes, (c) el propósito pedagógico del paso, y (d) el tiempo aproximado en minutos. La metodología seleccionada (${methodology ? methodology.name : 'institucional'}) debe ORGANIZAR realmente cada paso, no solo mencionarse. Integra el Vocabulary Big 5 y el Language Frame dentro de los pasos donde se usan. Desarrolla la Thinking Routine dentro del paso que corresponda (no solo la nombres). Los 8 pasos deben tener progresión lógica: activación → exploración → construcción → práctica guiada → práctica independiente → cierre/reflexión. Solo usa la secuencia Concreto→Pictórico→Abstracto si la materia es matemática o científica.
 2. Deja SOLO "Activity Link" y "Richmond Resources" como "". No inventes enlaces.
 3. Copia LITERAL uno de cada lista de arriba para: DBA_Reference, SDG_Connection, Standard, Dimension, Principle (solo el nombre), Value. No inventes.
 4. "Vocabulary Big 5": exactamente 5 palabras separadas por coma.
 5. "Thinking Skill": 1-2 de: ${skillsList}
 6. "Language Frame": OBLIGATORIO. Genera 2-3 sentence starters (estructuras de lenguaje) que los estudiantes usarán en clase, adaptados al tema y al idioma de la planeación. Sepáralos con " / ". Guíate por estos ejemplos: ${framesList}
-7. "Thinking Routine": OBLIGATORIO. Elige y nombra una rutina de pensamiento (ej: ${routinesList}) y desarróllala brevemente dentro de un paso de The Hook.
-8. "Weekly Challenge": OBLIGATORIO. Un reto semanal motivador ligado al tema.
-9. "Evaluation_Instrument": OBLIGATORIO. Un instrumento formativo concreto (ej: Exit Ticket, Rúbrica, Quiz, Observación directa).
-10. "Inclusion_Adjustments": exactamente 3 de: ${inclusionList}
-11. "Assessment_Dimension": una de Saber y Pensar (45%) / Hacer e Innovar (45%) / Ser y Sentir (10%).
+7. "Thinking Routine": OBLIGATORIO. Elige y nombra una rutina de pensamiento (ej: ${routinesList}) y desarróllala explícitamente dentro del paso de The Hook donde se aplica.
+8. "Parent Task": OBLIGATORIO. Una tarea corta y concreta para reforzar en casa, ligada al tema de la sesión.
+9. "Weekly Challenge": OBLIGATORIO. Un reto semanal motivador ligado al tema.
+10. "Evaluation_Instrument": OBLIGATORIO. Un instrumento formativo concreto (ej: Exit Ticket, Rúbrica, Quiz, Observación directa).
+11. "Inclusion_Adjustments": exactamente 3 de: ${inclusionList}
+12. "Assessment_Dimension": una de Saber y Pensar (45%) / Hacer e Innovar (45%) / Ser y Sentir (10%).
+13. "Learning_Evidence" (EVIDENCIA DE APRENDIZAJE, alta prioridad): "product" = el producto tangible y específico que el estudiante entrega (no genérico). "phases" = EXACTAMENTE 3 momentos (inicio, desarrollo, cierre); cada fase con: "moment" (nombre del momento), "action" (qué produce/hace el estudiante de forma observable), "collect" (cómo recoge el docente esa evidencia: instrumento concreto), "criteria" (criterio claro de logro que indica que el aprendizaje ocurrió). Las 3 fases deben conectarse entre sí y con el objetivo.
+${includeFeedback
+  ? '14. "Feedback_Questions": genera EXACTAMENTE 5 objetos { "q", "opts":[4 opciones cortas], "correct": índice 0-3 }. Varía la posición de la correcta. Menos de 5 es INVÁLIDO.'
+  : '14. "Feedback_Questions": devuelve un array VACÍO []. NO generes preguntas. Invierte esa capacidad en hacer "The Hook" (8 pasos) y "Learning_Evidence" más completos, detallados y pedagógicamente ricos.'}
 
 === FORMATO (JSON ONLY, sin markdown) ===
 Devuelve un array de EXACTAMENTE ${sessions} objeto(s), cada uno con estas claves:
-{"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":[{"q":"","opts":["","","",""],"correct":0}]}
+{"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":${includeFeedback ? '[{"q":"","opts":["","","",""],"correct":0}]' : '[]'}}
 Learning_Evidence: product = producto tangible; phases = 3 momentos (inicio/desarrollo/cierre) con action, collect, criteria.
-Feedback_Questions: EXACTAMENTE 5 objetos, cada uno con q, opts (4 opciones cortas), correct (índice 0-3, varía la posición).
+${includeFeedback ? 'Feedback_Questions: EXACTAMENTE 5 objetos, cada uno con q, opts (4 opciones cortas), correct (índice 0-3, varía la posición).' : 'Feedback_Questions: array VACÍO []. Prioriza profundidad en The Hook y Learning_Evidence.'}
 Genera exactamente ${sessions} objeto(s) en el array.`;
 };
 
 /* Prompt COMPACTO exclusivo para PR1ME Math (mínimos tokens de entrada) */
 /* Prompt PR1ME: estructura de 8 pasos PR1ME + listas curriculares para que la IA
    elija ODS, estándar, DBA, principio, dimensión y valor (como el prompt genérico) */
-const buildPrimePrompt = ({ sessionsContext, sessionsCount, subject, grade, term, methodology, primeCollection, primePart, lessonFlow, problemSteps, mallaCtx, syllabusJson }) => {
+const buildPrimePrompt = ({ sessionsContext, sessionsCount, subject, grade, term, methodology, primeCollection, primePart, lessonFlow, problemSteps, mallaCtx, syllabusJson, includeFeedback = true }) => {
     const methodLine = methodology
         ? `Selected methodology: ${methodology.name}.`
         : 'Use the institutional methodology.';
@@ -519,15 +524,16 @@ ${dimensionsList}
 === VALUES (copy EXACTLY one into "Value") ===
 ${valuesList}
 
-=== "The Hook" — MUST follow EXACTLY these 8 PR1ME steps, each as "Paso N: [Short Title]: [2-3 sentence concrete activity adapted to the session topic]" ===
-Paso 1: Let's Remember: activate prior knowledge tied to the topic.
-Paso 2: EXPLORE: pose a motivating problem to revisit at the end.
-Paso 3: Concrete: students use manipulatives (base-ten blocks, counters) hands-on.
-Paso 4: Pictorial: students represent with drawings/diagrams (number lines, bar models).
-Paso 5: Abstract: students write equations / number sentences / vertical form.
-Paso 6: Let's Do: teacher guides worked examples.
-Paso 7: Let's Practice: independent practice or a reinforcement game.
-Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→Answer→Check→+Plus) + short reflection.
+=== "The Hook" — MUST follow EXACTLY these 8 PR1ME steps, each as "Paso N: [Short Title]: [content]" ===
+For EACH step describe concretely: (a) what the TEACHER does, (b) what the STUDENTS do, (c) the pedagogical purpose, and (d) approximate time in minutes. Steps must have logical progression and connect to each other. Integrate the Vocabulary Big 5 and the Language Frame in the steps where they are used, and develop the Thinking Routine explicitly inside the step where it applies.
+Paso 1: Let's Remember: activate prior knowledge explicitly tied to the session topic (retrieval question or quick warm-up).
+Paso 2: EXPLORE: pose a motivating real-context problem to revisit at the end; students make initial predictions.
+Paso 3: Concrete: students manipulate physical materials (base-ten blocks, counters, fraction tiles) hands-on to build the concept.
+Paso 4: Pictorial: students represent the same idea with drawings/diagrams (number lines, bar models, arrays), bridging from the concrete.
+Paso 5: Abstract: students formalize with equations / number sentences / vertical form, connecting symbols to the pictorial stage.
+Paso 6: Let's Do: teacher models 1-2 worked examples with think-aloud, checking understanding.
+Paso 7: Let's Practice: students do independent/paired practice or a reinforcement game; teacher monitors and gives feedback.
+Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→Answer→Check→+Plus) plus a short metacognitive reflection tied to the EXPLORE problem.
 
 === RULES (fill EVERY field, none empty except the two noted) ===
 - Anchor each session to the official PR1ME objectives provided per block; do NOT invent content outside PR1ME.
@@ -542,16 +548,19 @@ Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→
 - "Methodology": ${methodology ? methodology.name : 'the institutional methodology'}.
 - "Inclusion_Adjustments": exactly 3 short adjustments (DUA/PIAR).
 - Leave ONLY "Activity Link" and "Richmond Resources" as "". The teacher adds them.
-- "Feedback_Questions": you MUST generate EXACTLY 5 question objects (not fewer), each { "q", "opts":[exactly 4 short options], "correct": index 0-3 }. Vary the correct position across the 5 questions. A session with fewer than 5 questions is INVALID.
+- "Learning_Evidence" (HIGH PRIORITY): "product" = a specific tangible student output (not generic). "phases" = EXACTLY 3 moments (inicio, desarrollo, cierre); each with "action" (observable thing the student produces), "collect" (concrete instrument the teacher uses to gather it), "criteria" (clear success criterion). The 3 phases must connect to each other and to the objective.
+${includeFeedback
+  ? '- "Feedback_Questions": you MUST generate EXACTLY 5 question objects (not fewer), each { "q", "opts":[exactly 4 short options], "correct": index 0-3 }. Vary the correct position across the 5 questions. A session with fewer than 5 questions is INVALID.'
+  : '- "Feedback_Questions": return an EMPTY array []. Do NOT generate questions. Invest that capacity in making "The Hook" (8 steps) and "Learning_Evidence" more complete, detailed and pedagogically rich.'}
 
 === OUTPUT (JSON ONLY, no markdown, no extra text) ===
 Return an array of EXACTLY ${sessionsCount} object(s), one per SESSION block below, in order. Each object with these keys:
-{"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":[{"q":"","opts":["","","",""],"correct":0}]}
+{"Topic":"","Objective":"","The Hook":"","Vocabulary Big 5":"","Thinking Skill":"","Language Frame":"","Thinking Routine":"","Parent Task":"","Weekly Challenge":"","DBA_Reference":"","SDG_Connection":"","Assessment_Dimension":"","Evaluation_Instrument":"","Standard":"","Dimension":"","Principle":"","Value":"","Methodology":"","Inclusion_Adjustments":["","",""],"Learning_Evidence":{"product":"","phases":[{"moment":"","action":"","collect":"","criteria":""}]},"Session_Number":"","Feedback_Questions":${includeFeedback ? '[{"q":"","opts":["","","",""],"correct":0}]' : '[]'}}
 
 "Learning_Evidence": "product" = tangible student output; "phases" = 3 moments (inicio/desarrollo/cierre) each with action, collect, criteria.
 
 === FINAL CHECK BEFORE RESPONDING ===
-Every session object MUST have all fields filled and MUST contain EXACTLY 5 items in "Feedback_Questions". Do not stop at 1 question — write all 5.
+Every session object MUST have all fields filled.${includeFeedback ? ' It MUST contain EXACTLY 5 items in "Feedback_Questions" — do not stop at 1, write all 5.' : ' "Feedback_Questions" MUST be an empty array []. Put the extra effort into richer "The Hook" and "Learning_Evidence".'}
 
 === SESSIONS (one object each, keep separate) ===
 ${sessionsContext}`;
@@ -614,6 +623,8 @@ export const PlanningCLIL = ({ userData }) => {
     const [previewPrompt, setPreviewPrompt] = useState(null);
     const [promptValues, setPromptValues] = useState({});
     const [numSessions, setNumSessions] = useState(1);
+    const [includeFeedback, setIncludeFeedback] = useState(true); // ¿generar las 5 preguntas de feedback?
+    const [lumiCustomFrame, setLumiCustomFrame] = useState(''); // input "Add custom frame" en la revisión de Lumi
     const [selMethodology, setSelMethodology] = useState('');
     const [lumiCtx, setLumiCtx] = useState(null);       // { ctx, syllabus }
     const [genSessions, setGenSessions] = useState([]); // sesiones generadas (editable)
@@ -737,6 +748,7 @@ export const PlanningCLIL = ({ userData }) => {
                     if (st.selectedPromptId) setSelectedPromptId(st.selectedPromptId);
                     if (st.promptValues) setPromptValues(st.promptValues);
                     if (typeof st.numSessions === 'number') setNumSessions(st.numSessions);
+                    if (typeof st.includeFeedback === 'boolean') setIncludeFeedback(st.includeFeedback);
                     if (st.selMethodology) setSelMethodology(st.selMethodology);
                     if (st.lumiCtx) setLumiCtx(st.lumiCtx);
                     if (Array.isArray(st.genSessions)) setGenSessions(st.genSessions);
@@ -766,7 +778,7 @@ export const PlanningCLIL = ({ userData }) => {
                 const st = {
                     view, lumiStage, messages,
                     selSubject, selGrade, selTerm,
-                    selectedPromptId, promptValues, numSessions, selMethodology,
+                    selectedPromptId, promptValues, numSessions, includeFeedback, selMethodology,
                     lumiCtx, genSessions,
                     primeData, primeChapterIdx, primeUnitIdx, primeSelectedSubs,
                     primeParts, primeSessions, primeNumSessions,
@@ -776,7 +788,7 @@ export const PlanningCLIL = ({ userData }) => {
             }
         } catch (e) { console.warn('No se pudo guardar sesión Lumi:', e); }
     }, [lumiRestored, view, lumiStage, messages, selSubject, selGrade, selTerm,
-        selectedPromptId, promptValues, numSessions, selMethodology, lumiCtx, genSessions,
+        selectedPromptId, promptValues, numSessions, includeFeedback, selMethodology, lumiCtx, genSessions,
         primeData, primeChapterIdx, primeUnitIdx, primeSelectedSubs, primeParts, primeSessions, primeNumSessions]);
 
     /* ================= LIMPIAR CACHÉ LOCAL ================= */
@@ -940,7 +952,7 @@ export const PlanningCLIL = ({ userData }) => {
         setLumiStage('welcome');
         setMessages([]);
         setSelSubject(''); setSelGrade(''); setSelTerm('');
-        setSelectedPromptId(''); setPromptValues({}); setNumSessions(1); setSelMethodology('');
+        setSelectedPromptId(''); setPromptValues({}); setNumSessions(1); setIncludeFeedback(true); setSelMethodology('');
         setGenSessions([]); setGenError(''); setLumiCtx(null);
         setPrimeData(null); setPrimeChapterIdx(''); setPrimeUnitIdx('');
         setPrimeSelectedSubs([]); setPrimeParts([]); setPrimeError('');
@@ -1179,6 +1191,7 @@ Teacher goal: ${pv.goal}`;
             problemSteps: first.primeProblemSteps,
             mallaCtx: lumiCtx?.ctx,
             syllabusJson,
+            includeFeedback,
         });
 
         try {
@@ -1291,7 +1304,7 @@ Teacher goal: ${pv.goal}`;
         const summary = currentPrompt.primeMath
             ? `PR1ME · ${primeValues.chapterTitle} · ${primeValues.unitTitle} · Temas: ${primeValues.selectedTopics}`
             : (currentPrompt.fields || []).map(f => `${f.label}: ${mergedValues[f.key]}`).join(' · ');
-        pushUser(`${summary} · Sesiones: ${sessions}`);
+        pushUser(`${summary} · Sesiones: ${sessions} · Feedback: ${includeFeedback ? 'Sí' : 'No'}`);
 
         setLumiStage('generating');
         pushLumi('🧠 Estoy diseñando tus sesiones con base en tu currículo… dame unos segundos.', 400);
@@ -1307,6 +1320,7 @@ Teacher goal: ${pv.goal}`;
             mallaCtx: lumiCtx?.ctx,
             syllabusJson,
             methodology: METHODOLOGIES.find(m => m.id === selMethodology),
+            includeFeedback,
         });
 
         try {
@@ -1928,6 +1942,32 @@ Teacher goal: ${pv.goal}`;
                                         )}
                                     </div>
 
+                                    {/* Toggle: incluir preguntas de feedback (aplica a todas las sesiones) */}
+                                    <div className="lumi-field">
+                                        <span>¿Incluir juego de feedback final (5 preguntas)?</span>
+                                        <div className="fb-toggle">
+                                            <button
+                                                type="button"
+                                                className={`fb-opt ${includeFeedback ? 'on' : ''}`}
+                                                onClick={() => setIncludeFeedback(true)}
+                                            >
+                                                🎮 Sí, con preguntas
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`fb-opt ${!includeFeedback ? 'on' : ''}`}
+                                                onClick={() => setIncludeFeedback(false)}
+                                            >
+                                                📝 No, mejor 8 pasos más ricos
+                                            </button>
+                                        </div>
+                                        <div className="fb-help">
+                                            {includeFeedback
+                                                ? 'Lumi generará 5 preguntas jugables al cierre de cada sesión.'
+                                                : 'Sin preguntas: Lumi invierte esos tokens en un Desarrollo (8 pasos) y una Evidencia de aprendizaje más detallados.'}
+                                        </div>
+                                    </div>
+
                                     {primeSessions.map((sess, sIdx) => {
                                         const chap = sess.chapterIdx !== '' ? primeData.capitulos[Number(sess.chapterIdx)] : null;
                                         const unit = (chap && sess.unitIdx !== '') ? chap.unidades?.[Number(sess.unitIdx)] : null;
@@ -2231,6 +2271,32 @@ Teacher goal: ${pv.goal}`;
                                         </div>
                                     )}
 
+                                    {/* Toggle: incluir preguntas de feedback (afecta tokens y calidad) */}
+                                    <div className="lumi-field">
+                                        <span>¿Incluir juego de feedback final (5 preguntas)?</span>
+                                        <div className="fb-toggle">
+                                            <button
+                                                type="button"
+                                                className={`fb-opt ${includeFeedback ? 'on' : ''}`}
+                                                onClick={() => setIncludeFeedback(true)}
+                                            >
+                                                🎮 Sí, con preguntas
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`fb-opt ${!includeFeedback ? 'on' : ''}`}
+                                                onClick={() => setIncludeFeedback(false)}
+                                            >
+                                                📝 No, mejor 8 pasos más ricos
+                                            </button>
+                                        </div>
+                                        <div className="fb-help">
+                                            {includeFeedback
+                                                ? 'Lumi generará 5 preguntas jugables al cierre de cada sesión.'
+                                                : 'Sin preguntas: Lumi invierte esos tokens en un Desarrollo (8 pasos) y una Evidencia de aprendizaje más detallados.'}
+                                        </div>
+                                    </div>
+
                                     <div className="lumi-hint">💡 Recuerda: máximo {MAX_SESSIONS} sesiones por generación para no saturar la IA. Lumi no copia enlaces de videos — esos los agregas tú al guardar.</div>
                                     {genError && <div className="lumi-error">{genError}</div>}
                                     <button className="ctx-go" onClick={submitFields}>Generar con Lumi ✨</button>
@@ -2296,33 +2362,50 @@ Teacher goal: ${pv.goal}`;
                                                 <div key={field} className="review-field">
                                                     <label>{label}</label>
                                                     {kind === "frames" ? (
-                                                        <div className="clil-frames-picker">
-                                                            {/* Los que la IA generó y no están en la lista oficial */}
-                                                            {extraFrames.length > 0 && (
-                                                                <div className="clil-frame-group">
-                                                                    <span className="clil-frame-cat">✨ Generados por Lumi</span>
-                                                                    <div className="clil-frame-chips">
+                                                        <div className="clil-box" style={{ marginTop: 0 }}>
+                                                            <div className="clil-custom-add" style={{ padding: '10px', display: 'flex', gap: '5px' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Add custom frame..."
+                                                                    value={lumiCustomFrame}
+                                                                    onChange={(e) => setLumiCustomFrame(e.target.value)}
+                                                                    style={{ fontSize: '0.8rem', flex: 1 }}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn-view"
+                                                                    style={{ padding: '5px 10px' }}
+                                                                    onClick={() => {
+                                                                        const v = lumiCustomFrame.trim();
+                                                                        if (v) { toggleFrame(v); setLumiCustomFrame(''); }
+                                                                    }}
+                                                                >+</button>
+                                                            </div>
+                                                            <div className="clil-scroll">
+                                                                {/* 1. Frames generados por Lumi que no están en la lista oficial */}
+                                                                {extraFrames.length > 0 && (
+                                                                    <div className="clil-cat"><strong>✨ GENERADO POR LUMI</strong>
                                                                         {extraFrames.map(v => (
                                                                             <div key={v} className="clil-option active" onClick={() => toggleFrame(v)}>{v}</div>
                                                                         ))}
                                                                     </div>
-                                                                </div>
-                                                            )}
-                                                            {/* La lista oficial agrupada por categoría */}
-                                                            {Object.entries(CLIL_RESOURCES.languageFrames).map(([cat, frames]) => (
-                                                                <div key={cat} className="clil-frame-group">
-                                                                    <span className="clil-frame-cat">{cat}</span>
-                                                                    <div className="clil-frame-chips">
+                                                                )}
+                                                                {/* 2. Lista oficial agrupada por categoría */}
+                                                                {Object.entries(CLIL_RESOURCES.languageFrames).map(([cat, frames]) => (
+                                                                    <div key={cat} className="clil-cat">
+                                                                        <strong>{cat.toUpperCase()}</strong>
                                                                         {frames.map(f => (
                                                                             <div
                                                                                 key={f}
                                                                                 className={`clil-option ${frameValues.includes(f) ? 'active' : ''}`}
                                                                                 onClick={() => toggleFrame(f)}
-                                                                            >{f}</div>
+                                                                            >
+                                                                                {f}
+                                                                            </div>
                                                                         ))}
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     ) : kind === "textarea" ? (
                                                         <textarea value={s[field] || ''} onChange={e => updateGenSession(idx, field, e.target.value)} />
