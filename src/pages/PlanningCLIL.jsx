@@ -825,14 +825,18 @@ export const PlanningCLIL = ({ userData }) => {
                 fetch(`${API_URL}?sheet=Syllabus_Templates`).then(r => r.json()).catch(() => []),
                 fetch(`${API_URL}?sheet=Prime_Math`).then(r => r.json()).catch(() => []),
             ]);
-            setCurriculumMaps(Array.isArray(mapsResp) ? mapsResp : []);
-            setSyllabusTemplates(Array.isArray(syllResp) ? syllResp : []);
-            setPrimeMathMaps(Array.isArray(primeResp) ? primeResp : []);
-            console.log('[CURRICULO] maps:', Array.isArray(mapsResp) ? mapsResp.length : 'no-array',
-                        '| syllabus:', Array.isArray(syllResp) ? syllResp.length : 'no-array',
-                        '| prime:', Array.isArray(primeResp) ? primeResp.length : 'no-array');
+            const maps = Array.isArray(mapsResp) ? mapsResp : [];
+            const syll = Array.isArray(syllResp) ? syllResp : [];
+            const prime = Array.isArray(primeResp) ? primeResp : [];
+            setCurriculumMaps(maps);
+            setSyllabusTemplates(syll);
+            setPrimeMathMaps(prime);
+            console.log('[CURRICULO] maps:', maps.length, '| syllabus:', syll.length, '| prime:', prime.length);
+            // Devolvemos los datos frescos para usarlos sin esperar al estado de React
+            return { maps, syll, prime };
         } catch (e) {
             console.error("Error cargando currículo:", e);
+            return { maps: [], syll: [], prime: [] };
         } finally {
             // SIEMPRE se ejecuta → el botón nunca se queda pegado en "Cargando currículo…"
             setLoadingCurriculum(false);
@@ -890,27 +894,35 @@ export const PlanningCLIL = ({ userData }) => {
     /* Materias que comparten la malla/plan de área de MATH */
     const mathFamily = (subject) => /math|matem|geomet|statis|estad|calcul/i.test(String(subject || ''));
 
-   const resolveCurriculum = (subject, grade, term) => {
-        // Si es GEOMETRY/STATISTICS/etc., también aceptamos filas de MATH como respaldo
+    /* Materias que comparten la malla/plan de área de SCIENCE */
+    const scienceFamily = (subject) => /science|scien|cienc|health|nutrition|nutric|salud|chemi|quimic|químic|physic|física|fisica|biolog/i.test(String(subject || ''));
+
+   const resolveCurriculum = (subject, grade, term, freshMaps, freshSyll) => {
+        // Usa datos frescos si se pasan (recién traídos del fetch); si no, el estado
+        const maps = freshMaps || curriculumMaps;
+        const sylls = freshSyll || syllabusTemplates;
+
+        // Familias de materias que comparten malla/plan de área
         const subjectMatches = (rowSubject) =>
             norm(rowSubject) === norm(subject) ||
-            (mathFamily(subject) && mathFamily(rowSubject));
+            (mathFamily(subject) && mathFamily(rowSubject)) ||
+            (scienceFamily(subject) && scienceFamily(rowSubject));
 
         // LOG temporal para diagnosticar por qué no encuentra la malla
         console.log('[RESOLVE] Buscando:', { subject: norm(subject), grade: norm(grade), term: norm(term) });
-        console.log('[RESOLVE] curriculumMaps tiene', curriculumMaps.length, 'filas');
-        if (curriculumMaps.length) {
+        console.log('[RESOLVE] curriculumMaps tiene', maps.length, 'filas');
+        if (maps.length) {
             console.log('[RESOLVE] Filas que coinciden en Subject:',
-                curriculumMaps.filter(m => subjectMatches(m.Subject))
+                maps.filter(m => subjectMatches(m.Subject))
                     .map(m => ({ Subject: norm(m.Subject), Grade: norm(m.Grade), Term: norm(m.Term) })));
         }
 
         const malla =
-            curriculumMaps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade) && norm(m.Term) === norm(term))
-            || curriculumMaps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade));
+            maps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade) && norm(m.Term) === norm(term))
+            || maps.find(m => subjectMatches(m.Subject) && norm(m.Grade) === norm(grade));
         const syllabus =
-            syllabusTemplates.find(s => subjectMatches(s.Subject) && norm(s.Grade) === norm(grade))
-            || syllabusTemplates.find(s => subjectMatches(s.Subject));
+            sylls.find(s => subjectMatches(s.Subject) && norm(s.Grade) === norm(grade))
+            || sylls.find(s => subjectMatches(s.Subject));
         const ctx = malla ? extractFromMalla(malla.Content_JSON, term) : { dbas: [], standards: [], sdgs: [], objectives: [], contents: [], steps: [], challenge: '', raw: null };
         return { malla, syllabus, ctx };
     };
@@ -961,12 +973,23 @@ export const PlanningCLIL = ({ userData }) => {
         pushLumi('Diseño tus clases contigo usando tu malla curricular y tu plan de área. Empecemos por elegir qué vas a planear.', null, () => setLumiStage('context'));
     };
 
-    const confirmContext = () => {
+    const confirmContext = async () => {
         if (!selSubject || !selGrade || !selTerm) return;
         pushUser(`${selSubject} · ${selGrade} · ${selTerm}`);
         setLumiStage('loading');
         pushLumi(`Perfecto. Buscando tu malla y plan de área de ${selSubject} para ${selGrade} (${selTerm})…`);
-        const { malla, syllabus, ctx } = resolveCurriculum(selSubject, selGrade, selTerm);
+
+        // Aseguramos tener el currículo cargado ANTES de resolver.
+        // Si el estado aún está vacío (primera entrada), lo traemos fresco del backend.
+        let maps = curriculumMaps;
+        let sylls = syllabusTemplates;
+        if (!maps.length || !sylls.length) {
+            const fresh = await fetchCurriculum();
+            maps = fresh.maps;
+            sylls = fresh.syll;
+        }
+
+        const { malla, syllabus, ctx } = resolveCurriculum(selSubject, selGrade, selTerm, maps, sylls);
         setLumiCtx({ ctx, syllabus });
         const bits = [];
         if (malla) bits.push(`✅ Malla encontrada (${ctx.dbas.length} DBAs, ${ctx.objectives.length} objetivos)`);
