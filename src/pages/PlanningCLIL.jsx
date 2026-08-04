@@ -817,6 +817,9 @@ export const PlanningCLIL = ({ userData }) => {
 
     /* ================= CURRÍCULO ================= */
     const fetchCurriculum = async () => {
+        // Si ya hay un fetch en curso, reutiliza esa misma promesa (no relances)
+        if (curriculumPromise.current) return curriculumPromise.current;
+        const run = (async () => {
         setLoadingCurriculum(true);
         try {
             // Cada fetch con su propio .catch → si UNO falla, no tumba a los demás
@@ -841,6 +844,11 @@ export const PlanningCLIL = ({ userData }) => {
             // SIEMPRE se ejecuta → el botón nunca se queda pegado en "Cargando currículo…"
             setLoadingCurriculum(false);
         }
+        })();
+        curriculumPromise.current = run;
+        const result = await run;
+        curriculumPromise.current = null; // liberar para futuras recargas manuales
+        return result;
     };
 
     /* Normaliza grados: acepta "FIRST GRADE", "1", "GRADO 1", "PRIMERO"... y los lleva a un número */
@@ -930,6 +938,8 @@ export const PlanningCLIL = ({ userData }) => {
     /* ================= LUMI ================= */
     const lumiQueue = useRef([]);
     const lumiProcessing = useRef(false);
+    // Promesa en curso del fetch de currículo (para no dispararlo dos veces)
+    const curriculumPromise = useRef(null);
 
     const processLumiQueue = () => {
         if (lumiProcessing.current) return;
@@ -960,6 +970,8 @@ export const PlanningCLIL = ({ userData }) => {
     const openLumi = () => {
         // Empezamos una sesión nueva: borramos cualquier sesión de Lumi guardada
         localStorage.removeItem('lumi_chat_state');
+        // Pre-cargamos el currículo YA (si no está), para que esté listo al confirmar contexto
+        if (!curriculumMaps.length || !syllabusTemplates.length) fetchCurriculum();
         setView('lumi');
         setLumiStage('welcome');
         setMessages([]);
@@ -984,6 +996,7 @@ export const PlanningCLIL = ({ userData }) => {
         let maps = curriculumMaps;
         let sylls = syllabusTemplates;
         if (!maps.length || !sylls.length) {
+            pushLumi('📚 Es la primera carga de la sesión, estoy trayendo todo el currículo… (unos segundos)');
             const fresh = await fetchCurriculum();
             maps = fresh.maps;
             sylls = fresh.syll;
