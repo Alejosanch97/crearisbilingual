@@ -950,6 +950,9 @@ export const PlanningCLIL = ({ userData }) => {
     // Promesa en curso del fetch de currículo (para no dispararlo dos veces)
     const curriculumPromise = useRef(null);
 
+    // Periodos de Lesson_Planners ya traídos del backend (evita refetch al filtrar)
+    const loadedTerms = useRef(new Set());
+
     const processLumiQueue = () => {
         if (lumiProcessing.current) return;
         const next = lumiQueue.current.shift();
@@ -1584,21 +1587,29 @@ Teacher goal: ${pv.goal}`;
     };
 
     /* ================= PLANNER ORIGINAL ================= */
-    const fetchData = async () => {
+    // termOverride: si viene, trae ese periodo. Si no, trae el periodo actual.
+    // Guardamos qué periodos ya cargamos para no repetir fetch al filtrar.
+    const fetchData = async (termOverride) => {
+        const termToFetch = termOverride || CURRENT_TERM;
         setIsSyncing(true);
         try {
-            const resp = await fetch(`${API_URL}?sheet=Lesson_Planners`);
+            const resp = await fetch(`${API_URL}?sheet=Lesson_Planners&term=${encodeURIComponent(termToFetch)}`);
             const data = await resp.json();
             if (Array.isArray(data)) {
-                if (isAdmin) setPlannings(data);
-                else {
-                    const myData = data.filter(p => {
-                        const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
-                        const userKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
-                        return recordKey === userKey;
-                    });
-                    setPlannings(myData);
-                }
+                const incoming = isAdmin ? data : data.filter(p => {
+                    const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
+                    const userKey = String(userData.Teacher_Key || userData.User_Key || "").trim();
+                    return recordKey === userKey;
+                });
+
+                // Acumulamos: quitamos las de ESE term que ya teníamos (por si refrescas)
+                // y metemos las nuevas. Así al pedir otro periodo no se borra el actual.
+                setPlannings(prev => {
+                    const sinEseTerm = prev.filter(p => String(p.Term).trim() !== termToFetch);
+                    // Conservamos también las locales sin guardar (isLocal) que sean de otro term
+                    return [...incoming, ...sinEseTerm];
+                });
+                loadedTerms.current.add(termToFetch);
             }
         } catch (e) { console.error("Error fetching data:", e); }
         setIsSyncing(false);
@@ -2950,9 +2961,16 @@ Teacher goal: ${pv.goal}`;
                                     <option value="">Todas las materias</option>
                                     {subjectOptions.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
-                                <select className="pl-select" value={filterTerm} onChange={(e) => setFilterTerm(e.target.value)}>
+                                <select className="pl-select" value={filterTerm} onChange={(e) => {
+                                    const t = e.target.value;
+                                    setFilterTerm(t);
+                                    // Si eligen un periodo que aún no traemos del backend, lo cargamos ahora
+                                    if (t && !loadedTerms.current.has(t)) fetchData(t);
+                                }}>
                                     <option value="">Todos los periodos</option>
-                                    {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {TERMS.map(t => <option key={t} value={t}>
+                                        {t}{loadedTerms.current.has(t) ? '' : ' (cargar)'}
+                                    </option>)}
                                 </select>
                                 {isFiltered && (
                                     <button className="pl-clear" onClick={() => { setFilterGrade(""); setFilterSubject(""); setFilterTerm(""); }}>

@@ -9,6 +9,8 @@ import { ClassReview } from "./ClassReview";
 import { LumiCard } from './LumiCard';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxIgwbIuGymDkRREiidM0lJYZRi5KdKS217_inoU751zp_x3EAzzxcljjNHSxZc34zBxQ/exec';
+// Periodo actual del colegio. Cambia esto al pasar de periodo (o luego lo hacemos dinámico).
+const CURRENT_TERM = "Third Term";
 
 // Hojas divididas por prioridad de carga (ver fetchAllSheets)
 const SHEETS = [
@@ -165,17 +167,16 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const fetchAllSheets = async () => {
         setIsLoading(true);
 
-        // TANDA 1: lo mínimo para pintar el perfil de inmediato
-        const criticas = ["Teachers_Users", "Weekly_Challenges", "Activities_Calendar"];
+        // TANDA 1 (BATCH): las 3 hojas críticas en UNA sola ejecución del script.
+        // Antes eran 3 cold starts; ahora es 1. Se pinta el perfil de inmediato.
         try {
+            const criticas = ["Teachers_Users", "Weekly_Challenges", "Activities_Calendar"];
+            const resp = await fetch(`${API_URL}?sheets=${criticas.join(',')}`);
+            const batch = await resp.json();
             const result1 = {};
-            await Promise.all(
-                criticas.map(async (sheet) => {
-                    const resp = await fetch(`${API_URL}?sheet=${sheet}`);
-                    const data = await resp.json();
-                    result1[sheet] = Array.isArray(data) ? data : [];
-                })
-            );
+            criticas.forEach(sheet => {
+                result1[sheet] = Array.isArray(batch[sheet]) ? batch[sheet] : [];
+            });
             setExcelData(prev => ({ ...prev, ...result1 }));
         } catch (e) {
             console.error("Error cargando hojas críticas:", e);
@@ -183,17 +184,16 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         // La pantalla ya se puede mostrar aquí, sin esperar lo pesado
         setIsLoading(false);
 
-        // TANDA 2: lo pesado, en segundo plano (no bloquea la interfaz)
-        const secundarias = ["Lesson_Planners", "Class_Observations", "Activity_Details_Form"];
+        // TANDA 2 (BATCH): lo pesado, en segundo plano (no bloquea la interfaz).
+        // Lesson_Planners filtrado por el term actual → menos payload, más rápido.
         try {
+            const secundarias = ["Lesson_Planners", "Class_Observations", "Activity_Details_Form"];
+            const resp = await fetch(`${API_URL}?sheets=${secundarias.join(',')}&term=${encodeURIComponent(CURRENT_TERM)}`);
+            const batch = await resp.json();
             const result2 = {};
-            await Promise.all(
-                secundarias.map(async (sheet) => {
-                    const resp = await fetch(`${API_URL}?sheet=${sheet}`);
-                    const data = await resp.json();
-                    result2[sheet] = Array.isArray(data) ? data : [];
-                })
-            );
+            secundarias.forEach(sheet => {
+                result2[sheet] = Array.isArray(batch[sheet]) ? batch[sheet] : [];
+            });
             setExcelData(prev => ({ ...prev, ...result2 }));
         } catch (e) {
             console.error("Error cargando hojas secundarias:", e);
