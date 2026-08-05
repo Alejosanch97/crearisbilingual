@@ -96,7 +96,7 @@ const buildDynamicMessages = (s) => {
 const ROTATE_MS = 5000; // cada cuánto cambia el mensaje
 
 
-export const LumiCard = ({ userData, stats = {} }) => {
+export const LumiCard = ({ userData, stats = {}, notifications = [], onNotificationsRead }) => {
   const teacherKey = String(userData?.Teacher_Key || userData?.User_Key || '').trim();
   const firstName = (userData?.Teacher_Name || userData?.User_Key || 'profe').split(' ')[0];
   const allMessages = useMemo(() => {
@@ -115,6 +115,8 @@ export const LumiCard = ({ userData, stats = {} }) => {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const rotateRef = useRef(null);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const unreadCount = notifications.filter(n => String(n.Status).trim() !== 'read').length;
 
   /* ---------- Cargar config guardada ---------- */
   useEffect(() => {
@@ -218,6 +220,21 @@ export const LumiCard = ({ userData, stats = {} }) => {
     setCustomizing(false);
   };
 
+  /* Abre el panel de alertas y marca las no leídas como leídas (auto) */
+  const openAlerts = async () => {
+    setShowAlerts(true);
+    const unread = notifications.filter(n => String(n.Status).trim() !== 'read');
+    if (unread.length === 0) return;
+    const ids = unread.map(n => n.ID_Notification);
+    if (onNotificationsRead) onNotificationsRead(ids); // optimista en el padre
+    try {
+      await Promise.all(unread.map(n => fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'markNotificationRead', idValue: n.ID_Notification })
+      })));
+    } catch (e) { console.error('No se pudieron marcar como leídas:', e); }
+  };
+
   const randomizeSeed = () => {
     const seeds = ['Felix', 'Luna', 'Nova', 'Pixel', 'Cosmo', 'Kiwi', 'Zeta', 'Orbit', 'Mango', 'Iris', 'Atlas', 'Vega'];
     const random = seeds[Math.floor(Math.random() * seeds.length)] + Math.floor(Math.random() * 100);
@@ -264,6 +281,10 @@ export const LumiCard = ({ userData, stats = {} }) => {
             <button className="lumi-btn primary" onClick={() => setCustomizing(v => !v)}>
               {customizing ? '✕ Cerrar' : '🎨 Personalizar'}
             </button>
+            <button className="lumi-btn ghost lumi-alerts-btn" onClick={openAlerts}>
+              🔔 Alertas
+              {unreadCount > 0 && <span className="lumi-alert-badge">{unreadCount}</span>}
+            </button>
           </div>
         </div>
       </div>
@@ -284,6 +305,35 @@ export const LumiCard = ({ userData, stats = {} }) => {
             <button className="lumi-btn primary" onClick={saveConfig} disabled={saving}>
               {saving ? 'Guardando…' : '✅ Guardar mi Lumi'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ---------- Panel de alertas / notificaciones de coordinación ---------- */}
+      {showAlerts && (
+        <div className="lumi-alerts-overlay" onClick={() => setShowAlerts(false)}>
+          <div className="lumi-alerts-panel" onClick={e => e.stopPropagation()}>
+            <div className="lumi-alerts-head">
+              <div>
+                <span className="lumi-alerts-eyebrow">📩 COORDINACIÓN</span>
+                <h3>Tus notificaciones</h3>
+              </div>
+              <button className="lumi-alerts-close" onClick={() => setShowAlerts(false)}>×</button>
+            </div>
+            <div className="lumi-alerts-body">
+              {notifications.length === 0 ? (
+                <p className="lumi-alerts-empty">No tienes notificaciones de coordinación por ahora.</p>
+              ) : (
+                [...notifications]
+                  .sort((a, b) => new Date(b.Created_At) - new Date(a.Created_At))
+                  .map(n => (
+                    <div key={n.ID_Notification} className="lumi-alert-item">
+                      <p>{n.Message}</p>
+                      <small>{n.Sender ? `${n.Sender} · ` : ''}{n.Created_At ? new Date(n.Created_At).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : ''}</small>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         </div>
       )}

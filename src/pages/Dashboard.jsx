@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../Styles/dashboard.css"; 
-import { LayoutDashboard, NotebookPen, CalendarDays, Search, LogOut, ChevronRight, RefreshCw, Target, ClipboardList, Trophy, Link2, BookOpen, Wrench, GraduationCap, ArrowRight, Plus, Check, Circle } from 'lucide-react';
+import { LayoutDashboard, NotebookPen, CalendarDays, Search, LogOut, ChevronRight, RefreshCw, Target, ClipboardList, Trophy, Link2, BookOpen, Wrench, GraduationCap, ArrowRight, Plus, Check, Circle, Users, AlertTriangle, Send } from 'lucide-react';
 
 import { PlanningCLIL } from "./PlanningCLIL"; 
 import { ActivitiesEvents } from "./ActivitiesEvents";
 import { ClassReview } from "./ClassReview"; 
 import { LumiCard } from './LumiCard';
+import { Accompaniment } from './Accompaniment';
+import { ParentMeetings } from './ParentMeetings';
+import { NotificationsSender } from './NotificationsSender';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxIgwbIuGymDkRREiidM0lJYZRi5KdKS217_inoU751zp_x3EAzzxcljjNHSxZc34zBxQ/exec';
 // Periodo actual del colegio. Cambia esto al pasar de periodo (o luego lo hacemos dinámico).
@@ -90,6 +93,9 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [confirmState, setConfirmState] = useState(null);
     const [toast, setToast] = useState(null);
 
+    const [showNotifSender, setShowNotifSender] = useState(false); // modal admin
+    const [myNotifications, setMyNotifications] = useState([]);     // notificaciones que recibe el profe
+
     /* Confirmación con promesa (reemplaza window.confirm) */
     const confirmDialog = ({ title, message, confirmText = "Confirmar", danger = false }) =>
         new Promise(resolve => {
@@ -115,6 +121,11 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         Status: "non completed",
         Evidence_Note: ""
     });
+
+    // ¿Este usuario ve el módulo de Acompañamiento? Admin siempre; profes con ENGLISH.
+    const isAdminUser = String(userData?.ROL || '').trim().toLowerCase() === 'admin';
+    const teachesEnglish = String(userData?.Assigned_Subject || '').toUpperCase().includes('ENGLISH');
+    const seesAccompaniment = isAdminUser || teachesEnglish;
     
     const navigate = useNavigate();
 
@@ -146,7 +157,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
             const data = propUser || JSON.parse(savedUser);
             setUserData(data);
             setSessionTip(CLIL_TIPS[Math.floor(Math.random() * CLIL_TIPS.length)]);
-            fetchAllSheets();
+            fetchAllSheets(data);   // pasamos el usuario directo, sin esperar al estado
         }
     }, [propUser, navigate]);
 
@@ -164,7 +175,9 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     
 
-    const fetchAllSheets = async () => {
+    const fetchAllSheets = async (userParam) => {
+        // Usamos el usuario que llega por parámetro (en la primera carga) o el del estado.
+        const u = userParam || userData;
         setIsLoading(true);
 
         // TANDA 1 (BATCH): las 3 hojas críticas en UNA sola ejecución del script.
@@ -197,6 +210,32 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
             setExcelData(prev => ({ ...prev, ...result2 }));
         } catch (e) {
             console.error("Error cargando hojas secundarias:", e);
+        }
+
+        // TANDA 3 (INDEPENDIENTE): notificaciones del docente.
+        // Fetch propio SIN term (la hoja no tiene columna Term) para que
+        // aunque falle la tanda pesada, las alertas siempre carguen.
+        try {
+            const resp = await fetch(`${API_URL}?sheet=Teacher_Notifications`);
+            const todas = await resp.json();
+            const lista = Array.isArray(todas) ? todas : [];
+
+            const myKeys = [
+                u?.User_Key,
+                u?.user_key,
+                u?.Teacher_Key,
+                u?.teacher_key,
+                u?.Teacher_Name
+            ].map(k => String(k || "").trim().toUpperCase()).filter(Boolean);
+
+            const notifs = lista.filter(n =>
+                myKeys.includes(String(n.Target_User_Key || "").trim().toUpperCase())
+            );
+
+            console.log("[NOTIF] claves:", myKeys, "| total hoja:", lista.length, "| mías:", notifs.length);
+            setMyNotifications(notifs);
+        } catch (e) {
+            console.error("[NOTIF] Error cargando notificaciones:", e);
         }
     };
 
@@ -595,6 +634,12 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                         {/* ===== LUMI a ancho completo ===== */}
                         <LumiCard
                             userData={userData}
+                            notifications={myNotifications}
+                            onNotificationsRead={(ids) => {
+                                setMyNotifications(prev => prev.map(n =>
+                                    ids.includes(n.ID_Notification) ? { ...n, Status: 'read' } : n
+                                ));
+                            }}
                             stats={{
                                 pendingTasks: pendingTasks.length,
                                 totalTasks: myTasks.length,
@@ -835,6 +880,8 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
             case "planning": return <PlanningCLIL userData={userData} />;
             case "activities": return <ActivitiesEvents userData={userData} />;
             case "revision": return <ClassReview userData={userData} teacherList={allTeachers} />;
+            case "accompaniment": return <Accompaniment userData={userData} />;
+            case "meetings": return <ParentMeetings userData={userData} />;
             default: return null;
         }
     };
@@ -896,6 +943,42 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             <span className="ls-item-glow" />
                             <Search className="ls-icon" size={19} strokeWidth={2} />
                             <span className="ls-label">Review</span>
+                            <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                        </button>
+                    )}
+
+                    {seesAccompaniment && (
+                        <button
+                            className={`ls-item ${activeTab === "accompaniment" ? "on" : ""}`}
+                            onClick={() => { setActiveTab("accompaniment"); setIsMobileMenuOpen(false); }}
+                        >
+                            <span className="ls-item-glow" />
+                            <Users className="ls-icon" size={19} strokeWidth={2} />
+                            <span className="ls-label">Acompañamiento</span>
+                            <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                        </button>
+                    )}
+
+                    {userData.ROL === "Admin" && (
+                        <button
+                            className={`ls-item ${activeTab === "meetings" ? "on" : ""}`}
+                            onClick={() => { setActiveTab("meetings"); setIsMobileMenuOpen(false); }}
+                        >
+                            <span className="ls-item-glow" />
+                            <AlertTriangle className="ls-icon" size={19} strokeWidth={2} />
+                            <span className="ls-label">Citaciones</span>
+                            <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
+                        </button>
+                    )}
+
+                    {userData.ROL === "Admin" && (
+                        <button
+                            className="ls-item"
+                            onClick={() => { setShowNotifSender(true); setIsMobileMenuOpen(false); }}
+                        >
+                            <span className="ls-item-glow" />
+                            <Send className="ls-icon" size={19} strokeWidth={2} />
+                            <span className="ls-label">Notificar</span>
                             <ChevronRight className="ls-chevron" size={15} strokeWidth={2.5} />
                         </button>
                     )}
@@ -1118,12 +1201,17 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                 </div>
             )}
 
-            {/* ---------- Toast ---------- */}
+           {/* ---------- Toast ---------- */}
             {toast && (
                 <div className={`lumi-toast ${toast.type}`}>
                     <span className="toast-dot" />
                     {toast.message}
                 </div>
+            )}
+
+            {/* ---------- Modal envío de notificaciones (Admin) ---------- */}
+            {showNotifSender && (
+                <NotificationsSender userData={userData} onClose={() => setShowNotifSender(false)} />
             )}
         </div>
     );
