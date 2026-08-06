@@ -2069,3 +2069,716 @@
     box-sizing: border-box;
   }
 }
+
+/* ============================================================
+   RESPONSIVE DESIGN COMPLETO - Planning Studio
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. ESCRITORIOS MEDIANOS (Max: 1100px)
+   ------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .dashboard-container .content-grid {
+    gap: 20px;
+  }
+
+  .metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-container .vocab-v2-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    padding: 24px;
+  }
+}
+
+/* ------------------------------------------------------------
+   2. TABLETS VERTICALES (Max: 900px)
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .lumi-sidebar {
+    width: 100%;
+    min-height: auto;
+    height: auto;
+    position: relative;
+    flex-direction: row;
+    padding: 12px 16px;
+    align-items: center;
+  }
+
+  .ls-brand {
+    display: none;
+  }
+
+  .ls-nav {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+
+  .ls-label,
+  .ls-chevron {
+    display: none;
+  }
+
+  .ls-item {
+    justify-content: center;
+    padding: 10px;
+    width: auto;
+  }
+
+  .dashboard-container .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 30px 24px;
+  }
+
+  .dashboard-container .content-grid,
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-container .wide-card,
+  .panel.wide {
+    grid-column: span 1;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------
+   3. DISPOSITIVOS MÓVILES (Max: 850px)
+   ------------------------------------------------------------ */
+@media (max-width: 850px) {
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .lumi-sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    flex-direction: column;
+    z-index: 1000;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+  }
+
+  .lumi-sidebar.open {
+    left: 0;
+  }
+
+  .ls-brand {
+    display: flex;
+  }
+
+  .ls-nav {
+    flex-direction: column;
+  }
+
+  .ls-label {
+    display: block;
+  }
+
+  .ls-item {
+    justify-content: flex-start;
+    padding: 13px 15px;
+    width: 100%;
+  }
+
+  .dashboard-container .main-content {
+    margin-left: 0 !important;
+    padding: 85px 20px 30px;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .sync-container {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+    box-sizing: border-box;
+  }
+
+  .dashboard-container .content-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. TELÉFONOS (Max: 640px)
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  .lumi-card {
+    padding: 20px 16px;
+  }
+
+  .lumi-card-main {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .lumi-avatar-wrap {
+    width: 100px;
+    height: 100px;
+  }
+
+  .lumi-card-body {
+    width: 100%;
+  }
+
+  .lumi-card-name {
+    font-size: 1.4rem;
+    text-align: center;
+  }
+
+  .lumi-speech {
+    min-height: 70px;
+    padding: 14px;
+    text-align: left;
+  }
+
+  .lumi-speech p {
+    font-size: 0.85rem;
+  }
+
+  .lumi-card-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .lumi-card-actions .lumi-btn,
+  .lumi-cust-actions .lumi-btn {
+    width: 100%;
+  }
+
+  .lumi-cust-actions {
+    flex-direction: column-reverse;
+  }
+
+  .lumi-chip-row {
+    justify-content: center;
+  }
+
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    padding: 16px;
+  }
+
+  .metric-value strong {
+    font-size: 1.5rem;
+  }
+
+  .dashboard-container .info-card {
+    padding: 20px;
+  }
+
+  .dashboard-container .score-val {
+    font-size: 3.5rem;
+  }
+
+  .goals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tools-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tool-card {
+    padding: 14px 10px;
+  }
+
+  .tool-emoji {
+    font-size: 1.3rem;
+  }
+
+  .tool-card strong {
+    font-size: 0.7rem;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .panel-head h3 {
+    font-size: 0.75rem;
+  }
+
+  .panel-action {
+    justify-content: center;
+  }
+
+  .panel-body {
+    padding: 14px 16px;
+  }
+
+  .vocab-chips {
+    justify-content: center;
+  }
+
+  .vocab-chip {
+    font-size: 0.7rem;
+    padding: 5px 12px;
+  }
+
+  .agenda-item {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+
+  .agenda-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .agenda-text {
+    font-size: 0.82rem;
+  }
+
+  .agenda-flag {
+    font-size: 0.55rem;
+  }
+
+  .agenda-del {
+    align-self: flex-start;
+  }
+
+  .dashboard-container .modal-overlay {
+    padding: 12px;
+  }
+
+  .dashboard-container .batch-challenge-window {
+    padding: 20px;
+    border-radius: 18px;
+    max-width: 100%;
+  }
+
+  .dashboard-container .vocab-v2-window {
+    width: 100%;
+    height: 92vh;
+    border-radius: 20px;
+  }
+
+  .dashboard-container .vocab-v2-header {
+    padding: 20px;
+  }
+
+  .dashboard-container .vocab-v2-grid {
+    padding: 20px 15px;
+    grid-template-columns: 1fr;
+  }
+
+  .task-modal {
+    width: 100%;
+    border-radius: 20px;
+  }
+
+  .tm-head,
+  .tm-body,
+  .tm-foot {
+    padding: 16px 20px;
+  }
+
+  .tm-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tm-head h3 {
+    font-size: 1.1rem;
+  }
+
+  .tm-foot {
+    flex-direction: column-reverse;
+  }
+
+  .tm-btn {
+    width: 100%;
+  }
+
+  .tm-chips {
+    flex-direction: column;
+  }
+
+  .tm-chip {
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .confirm-dialog {
+    padding: 24px 20px;
+  }
+
+  .cd-actions {
+    flex-direction: column;
+  }
+
+  .cd-actions .tm-btn {
+    width: 100%;
+  }
+
+  .lumi-toast {
+    width: 90%;
+    font-size: 0.8rem;
+    padding: 12px 18px;
+    bottom: 16px;
+  }
+
+  .lumi-alerts-panel {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .lumi-alerts-head {
+    padding: 16px 18px;
+    flex-wrap: wrap;
+  }
+
+  .lumi-alerts-body {
+    padding: 14px 18px;
+  }
+
+  .lumi-alert-item {
+    padding: 10px 12px;
+  }
+
+  .lumi-alert-item p {
+    font-size: 0.82rem;
+  }
+
+  /* Corrección del formulario manual */
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .clil-selector-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .curriculum-fields .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .incl-chips {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .incl-chip {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .grade-selector {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .grade-chip {
+    font-size: 0.75rem;
+    padding: 6px 14px;
+  }
+}
+
+/* ------------------------------------------------------------
+   5. PANTALLAS MUY PEQUEÑAS (Max: 480px)
+   ------------------------------------------------------------ */
+@media (max-width: 480px) {
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lumi-avatar-wrap {
+    width: 80px;
+    height: 80px;
+  }
+
+  .lumi-avatar-big {
+    border-radius: 20px;
+  }
+
+  .dh-title h2 {
+    font-size: 1.2rem;
+  }
+
+  .dh-eyebrow {
+    font-size: 0.6rem;
+  }
+
+  .dashboard-container .main-content {
+    padding: 75px 14px 20px;
+  }
+
+  .dashboard-container .info-card {
+    padding: 16px;
+  }
+
+  .dashboard-container .info-card h3 {
+    font-size: 0.7rem;
+  }
+
+  .dashboard-container .batch-challenge-window {
+    padding: 16px;
+  }
+
+  .dashboard-container .batch-scroll-area {
+    max-height: 200px;
+  }
+
+  .lumi-card {
+    padding: 16px 12px;
+  }
+
+  .lumi-card-name {
+    font-size: 1.2rem;
+  }
+
+  .lumi-speech {
+    min-height: 60px;
+    padding: 12px;
+  }
+
+  .lumi-speech p {
+    font-size: 0.8rem;
+  }
+
+  .sync-container {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sync-status {
+    font-size: 0.7rem;
+  }
+
+  .metric-card {
+    padding: 12px;
+  }
+
+  .metric-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .metric-label {
+    font-size: 0.6rem;
+  }
+
+  .metric-value strong {
+    font-size: 1.3rem;
+  }
+
+  .panel-head {
+    padding: 12px 14px;
+  }
+
+  .panel-body {
+    padding: 12px 14px;
+  }
+
+  .vocab-chip {
+    font-size: 0.65rem;
+    padding: 4px 10px;
+  }
+
+  .agenda-item {
+    padding: 10px;
+  }
+
+  .agenda-text {
+    font-size: 0.78rem;
+  }
+
+  .agenda-note {
+    font-size: 0.7rem;
+  }
+
+  .task-modal textarea,
+  .task-modal input[type="date"] {
+    font-size: 0.8rem;
+    padding: 10px 12px;
+  }
+
+  .tm-head h3 {
+    font-size: 0.95rem;
+  }
+
+  .tm-btn {
+    font-size: 0.8rem;
+    padding: 10px 20px;
+  }
+
+  .lumi-toast {
+    font-size: 0.75rem;
+    padding: 10px 14px;
+  }
+}
+
+/* ------------------------------------------------------------
+   6. SIDEBAR OVERLAY (para móviles)
+   ------------------------------------------------------------ */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------
+   7. HAMBURGUESA - Siempre visible en móviles
+   ------------------------------------------------------------ */
+.hamburger-menu {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1001;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 850px) {
+  .hamburger-menu {
+    display: flex;
+  }
+}
+
+/* ------------------------------------------------------------
+   8. CORRECCIÓN PARA EL CONTENEDOR PRINCIPAL
+   ------------------------------------------------------------ */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--dash-bg);
+  color: var(--dash-text);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  align-items: flex-start;
+}
+
+@media (max-width: 850px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+}
+
+/* ------------------------------------------------------------
+   9. CORRECCIÓN PARA QUE EL SIDEBAR SEA STICKY EN ESCRITORIO
+   ------------------------------------------------------------ */
+.lumi-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 252px;
+  min-height: 100vh;
+  padding: 26px 16px 22px;
+  background: linear-gradient(170deg, #131c31 0%, #1c1b3a 100%);
+  font-family: 'Inter', system-ui, sans-serif;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .lumi-sidebar {
+    position: relative;
+    height: auto;
+    width: 100%;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 850px) {
+  .lumi-sidebar {
+    position: fixed;
+    height: 100vh;
+    width: 280px;
+    left: -280px;
+  }
+}
+
+/* ------------------------------------------------------------
+   10. CORRECCIÓN PARA EL MAIN CONTENT
+   ------------------------------------------------------------ */
+.dashboard-container .main-content {
+  flex: 1;
+  margin-left: 252px;
+  padding: 40px 60px;
+  box-sizing: border-box;
+  width: calc(100% - 252px);
+}
+
+@media (max-width: 900px) {
+  .dashboard-container .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 30px 24px;
+  }
+}
+
+@media (max-width: 850px) {
+  .dashboard-container .main-content {
+    padding: 85px 20px 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container .main-content {
+    padding: 75px 14px 20px;
+  }
+}
