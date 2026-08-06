@@ -58,11 +58,6 @@ export const ParentMeetings = ({ userData }) => {
     return (
         <div className="pm-root">
             <div className="pm-head">
-                <div>
-                    <span className="pm-eyebrow">CITACIONES A PADRES · NIVELACIÓN</span>
-                    <h2>Seguimiento y compromisos</h2>
-                    <p>Estudiantes reprobados que requieren citación y compromiso de acudientes.</p>
-                </div>
                 <button className="pm-btn ghost" onClick={fetchAll} disabled={loading}>
                     <RefreshCw size={15} /> {loading ? 'Cargando…' : 'Actualizar'}
                 </button>

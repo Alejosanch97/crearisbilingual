@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import "../Styles/dashboard.css"; 
+import "../Styles/dashboard.css";
 import { LayoutDashboard, NotebookPen, CalendarDays, Search, LogOut, ChevronRight, RefreshCw, Target, ClipboardList, Trophy, Link2, BookOpen, Wrench, GraduationCap, ArrowRight, Plus, Check, Circle, Users, AlertTriangle, Send } from 'lucide-react';
 
-import { PlanningCLIL } from "./PlanningCLIL"; 
+import { PlanningCLIL } from "./PlanningCLIL";
 import { ActivitiesEvents } from "./ActivitiesEvents";
-import { ClassReview } from "./ClassReview"; 
+import { ClassReview } from "./ClassReview";
 import { LumiCard } from './LumiCard';
 import { Accompaniment } from './Accompaniment';
 import { ParentMeetings } from './ParentMeetings';
@@ -56,7 +56,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [showVocabModal, setShowVocabModal] = useState(false);
     const [showChallengeModal, setShowChallengeModal] = useState(false);
     const [showResourceModal, setShowResourceModal] = useState(false); // <--- Modal nuevo
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [sessionTip, setSessionTip] = useState("");
 
     const [showTaskModal, setShowTaskModal] = useState(false);
@@ -75,9 +75,9 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const [allTeachers, setAllTeachers] = useState([]);
     const [userActivities, setUserActivities] = useState([]);
     const [allActivities, setAllActivities] = useState([]);
-    const [userChallenges, setUserChallenges] = useState([]); 
-    const [vocabularyData, setVocabularyData] = useState([]); 
-    const [simpleVocabList, setSimpleVocabList] = useState([]); 
+    const [userChallenges, setUserChallenges] = useState([]);
+    const [vocabularyData, setVocabularyData] = useState([]);
+    const [simpleVocabList, setSimpleVocabList] = useState([]);
     const [averageScore, setAverageScore] = useState(0);
 
     const [resourceLink, setResourceLink] = useState(""); // Estado para el input de link
@@ -126,7 +126,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     const isAdminUser = String(userData?.ROL || '').trim().toLowerCase() === 'admin';
     const teachesEnglish = String(userData?.Assigned_Subject || '').toUpperCase().includes('ENGLISH');
     const seesAccompaniment = isAdminUser || teachesEnglish;
-    
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -134,7 +134,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
     }, [goals2026]);
 
     const toggleGoal = (id) => {
-        setGoals2026(prev => prev.map(g => 
+        setGoals2026(prev => prev.map(g =>
             g.id === id ? { ...g, completed: !g.completed } : g
         ));
     };
@@ -173,7 +173,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         return () => clearInterval(syncInterval.current);
     }, [isLoading]);
 
-    
+
 
     const fetchAllSheets = async (userParam) => {
         // Usamos el usuario que llega por parámetro (en la primera carga) o el del estado.
@@ -239,6 +239,32 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         }
     };
 
+    // Agrega esta función después de fetchAllSheets
+    const refreshNotifications = async () => {
+        try {
+            const resp = await fetch(`${API_URL}?sheet=Teacher_Notifications`);
+            const todas = await resp.json();
+            const lista = Array.isArray(todas) ? todas : [];
+
+            const u = userData;
+            const myKeys = [
+                u?.User_Key,
+                u?.user_key,
+                u?.Teacher_Key,
+                u?.teacher_key,
+                u?.Teacher_Name
+            ].map(k => String(k || "").trim().toUpperCase()).filter(Boolean);
+
+            const notifs = lista.filter(n =>
+                myKeys.includes(String(n.Target_User_Key || "").trim().toUpperCase())
+            );
+
+            setMyNotifications(notifs);
+        } catch (e) {
+            console.error("[NOTIF] Error refrescando notificaciones:", e);
+        }
+    };
+
     // 1. CORRECCIÓN DE LÓGICA DE PROGRESO (Semáforo)
     const calculateProgress = (activity) => {
         const details = excelData.Activity_Details_Form || [];
@@ -292,7 +318,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
         );
         setUserChallenges(allMyChallenges);
 
-        
+
 
         setAllActivities(excelData.Activities_Calendar || []);
         const myActs = (excelData.Activities_Calendar || []).filter(a =>
@@ -438,7 +464,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             idValue: existingId,
                             data: {
                                 ID_Challenge: existingId || `CH-${Date.now()}-${idx}`,
-                                Teacher_Key: teacherIdentifier, 
+                                Teacher_Key: teacherIdentifier,
                                 Challenge_Description: description,
                                 Start_Date: challengeForm.Start_Date,
                                 Days_Active: challengeForm.Days_Active,
@@ -450,7 +476,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                 })
             );
             setShowChallengeModal(false);
-            await fetchAllSheets(); 
+            await fetchAllSheets();
         } catch (err) { console.error(err); }
         setIsLoading(false);
     };
@@ -728,7 +754,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
                             {/* Retos */}
                             <section className="panel">
-                               <div className="panel-head">
+                                <div className="panel-head">
                                     <h3>
                                         <ClipboardList size={16} strokeWidth={2.2} /> Mi agenda
                                         {isSyncingTask && <span className="agenda-sync"><RefreshCw size={12} strokeWidth={2.5} /> guardando</span>}
@@ -809,7 +835,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                                             {myResources.map((res, idx) => {
                                                 const link = res.Bilingual_Resources;
                                                 let host = link;
-                                                try { host = new URL(link).hostname.replace('www.', ''); } catch {}
+                                                try { host = new URL(link).hostname.replace('www.', ''); } catch { }
                                                 return (
                                                     <div key={res.ID_Challenge || idx} className="res-item">
                                                         <a href={link} target="_blank" rel="noreferrer" className="res-link">
@@ -830,7 +856,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                             </section>
 
                             {/* Herramientas — ancho completo */}
-                           <section className="panel wide">
+                            <section className="panel wide">
                                 <div className="panel-head">
                                     <h3><Wrench size={16} strokeWidth={2.2} /> Herramientas</h3>
                                 </div>
@@ -888,7 +914,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
     return (
         <div className={`dashboard-container ${isMobileMenuOpen ? "mobile-menu-active" : ""}`}>
-            
+
             <button className="hamburger-menu" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                 {isMobileMenuOpen ? "✕" : "☰"}
             </button>
@@ -1059,20 +1085,20 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                         </div>
                         <form onSubmit={handleChallengeSubmit} className="batch-form">
                             <div className="batch-teacher-name-box">
-                                <label style={{display:'block', fontSize:'0.7rem', color:'#64748b', fontWeight:'800'}}>TEACHER</label>
+                                <label style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: '800' }}>TEACHER</label>
                                 <span>{userData.Teacher_Name || userData.name}</span>
                             </div>
                             <label className="batch-label-group">Manage your 5 active challenges</label>
                             <div className="batch-scroll-area">
                                 {challengeForm.Challenge_Descriptions.map((desc, index) => (
-                                    <div key={index} style={{position:'relative'}}>
+                                    <div key={index} style={{ position: 'relative' }}>
                                         <textarea value={desc} onChange={e => handleChallengeDescriptionChange(index, e.target.value)} placeholder={`Challenge ${index + 1}`} className="batch-textarea" />
-                                        {challengeForm.Existing_IDs[index] && <span style={{position:'absolute', right:'15px', top:'5px', fontSize:'0.65rem', color:'#10b981', fontWeight:'800'}}>✓ SAVED</span>}
+                                        {challengeForm.Existing_IDs[index] && <span style={{ position: 'absolute', right: '15px', top: '5px', fontSize: '0.65rem', color: '#10b981', fontWeight: '800' }}>✓ SAVED</span>}
                                     </div>
                                 ))}
                             </div>
                             <div className="batch-row-grid">
-                                <div className="batch-field"><label>Start Date</label><input type="date" className="batch-input" value={challengeForm.Start_Date} onChange={e => setChallengeForm({...challengeForm, Start_Date: e.target.value})} /></div>
+                                <div className="batch-field"><label>Start Date</label><input type="date" className="batch-input" value={challengeForm.Start_Date} onChange={e => setChallengeForm({ ...challengeForm, Start_Date: e.target.value })} /></div>
                                 <div className="batch-field"><label>Days Active</label><input type="number" className="batch-input" value={challengeForm.Days_Active} readOnly /></div>
                             </div>
                             <button type="submit" className="batch-submit-btn" disabled={isLoading}>{isLoading ? "Syncing..." : "Update & Save All Challenges"}</button>
@@ -1201,7 +1227,7 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
                 </div>
             )}
 
-           {/* ---------- Toast ---------- */}
+            {/* ---------- Toast ---------- */}
             {toast && (
                 <div className={`lumi-toast ${toast.type}`}>
                     <span className="toast-dot" />
@@ -1211,7 +1237,11 @@ export const Dashboard = ({ user: propUser, onLogout }) => {
 
             {/* ---------- Modal envío de notificaciones (Admin) ---------- */}
             {showNotifSender && (
-                <NotificationsSender userData={userData} onClose={() => setShowNotifSender(false)} />
+                <NotificationsSender
+                    userData={userData}
+                    onClose={() => setShowNotifSender(false)}
+                    onNotificationSent={refreshNotifications}  // ← NUEVA PROP
+                />
             )}
         </div>
     );

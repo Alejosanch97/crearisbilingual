@@ -119,11 +119,6 @@ export const Accompaniment = ({ userData }) => {
         <div className="acc-root">
             {/* Cabecera */}
             <div className="acc-head">
-                <div>
-                    <span className="acc-eyebrow">ACOMPAÑAMIENTO · NIVELACIÓN INGLÉS</span>
-                    <h2>Estudiantes en alerta</h2>
-                    <p>{isAdmin ? 'Vista de coordinación · todos los grados' : `Tus grados: ${visibleGrades.join(', ') || '—'}`}</p>
-                </div>
                 <div className="acc-head-actions">
                     <button className="acc-btn ghost" onClick={fetchStudents} disabled={loading}>
                         <RefreshCw size={15} /> {loading ? 'Cargando…' : 'Actualizar'}

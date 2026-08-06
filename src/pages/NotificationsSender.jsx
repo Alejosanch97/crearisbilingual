@@ -14,7 +14,7 @@ const QUICK = [
     "Por favor actualiza el veredicto de tus estudiantes de acompañamiento.",
 ];
 
-export const NotificationsSender = ({ userData, onClose }) => {
+export const NotificationsSender = ({ userData, onClose, onNotificationSent }) => {
     const senderName = String(userData.Teacher_Name || userData.User_Key || '').trim();
 
     const [teachers, setTeachers] = useState([]);
@@ -77,6 +77,12 @@ export const NotificationsSender = ({ userData, onClose }) => {
                     }
                 })
             })));
+
+            // ✅ NOTIFICAR AL DASHBOARD QUE SE ENVIÓ
+            if (onNotificationSent) {
+                await onNotificationSent();
+            }
+
         } catch (e) { console.error('Error enviando notificaciones:', e); }
 
         setMessage('');
