@@ -407,7 +407,7 @@ const buildMasterPrompt = ({ promptDef, values, sessions, subject, grade, term, 
     // Muestra de rutinas de pensamiento disponibles
     const routinesList = (CLIL_RESOURCES.thinkingRoutines || []).slice(0, 8).join(', ');
 
-     return `Eres Lumi, un asistente experto en diseño pedagógico CLIL para el Colegio CREAR (Colombia). Tu tarea es crear ${sessions} sesión(es) de clase de altísima calidad, tomando como base el TEMA y OBJETIVO que define el docente.
+    return `Eres Lumi, un asistente experto en diseño pedagógico CLIL para el Colegio CREAR (Colombia). Tu tarea es crear ${sessions} sesión(es) de clase de altísima calidad, tomando como base el TEMA y OBJETIVO que define el docente.
 
 ${langLine}
 
@@ -480,8 +480,8 @@ ${userRequest}
 12. "Assessment_Dimension": una de Saber y Pensar (45%) / Hacer e Innovar (45%) / Ser y Sentir (10%).
 13. "Learning_Evidence" (EVIDENCIA DE APRENDIZAJE, alta prioridad): "product" = el producto tangible y específico que el estudiante entrega (no genérico). "phases" = EXACTAMENTE 3 momentos (inicio, desarrollo, cierre); cada fase con: "moment" (nombre del momento), "action" (qué produce/hace el estudiante de forma observable), "collect" (cómo recoge el docente esa evidencia: instrumento concreto), "criteria" (criterio claro de logro que indica que el aprendizaje ocurrió). Las 3 fases deben conectarse entre sí y con el objetivo.
 ${includeFeedback
-  ? '14. "Feedback_Questions": genera EXACTAMENTE 5 objetos { "q", "opts":[4 opciones cortas], "correct": índice 0-3 }. Varía la posición de la correcta. Menos de 5 es INVÁLIDO.'
-  : '14. "Feedback_Questions": devuelve un array VACÍO []. NO generes preguntas. Invierte esa capacidad en hacer "The Hook" (8 pasos) y "Learning_Evidence" más completos, detallados y pedagógicamente ricos.'}
+            ? '14. "Feedback_Questions": genera EXACTAMENTE 5 objetos { "q", "opts":[4 opciones cortas], "correct": índice 0-3 }. Varía la posición de la correcta. Menos de 5 es INVÁLIDO.'
+            : '14. "Feedback_Questions": devuelve un array VACÍO []. NO generes preguntas. Invierte esa capacidad en hacer "The Hook" (8 pasos) y "Learning_Evidence" más completos, detallados y pedagógicamente ricos.'}
 
 === FORMATO (JSON ONLY, sin markdown) ===
 Devuelve un array de EXACTAMENTE ${sessions} objeto(s), cada uno con estas claves:
@@ -559,8 +559,8 @@ Paso 8: Mind Stretcher & Reflection: a non-routine problem (Understand→Plan→
 - Leave ONLY "Activity Link" and "Richmond Resources" as "". The teacher adds them.
 - "Learning_Evidence" (HIGH PRIORITY): "product" = a specific tangible student output (not generic). "phases" = EXACTLY 3 moments (inicio, desarrollo, cierre); each with "action" (observable thing the student produces), "collect" (concrete instrument the teacher uses to gather it), "criteria" (clear success criterion). The 3 phases must connect to each other and to the objective.
 ${includeFeedback
-  ? '- "Feedback_Questions": you MUST generate EXACTLY 5 question objects (not fewer), each { "q", "opts":[exactly 4 short options], "correct": index 0-3 }. Vary the correct position across the 5 questions. A session with fewer than 5 questions is INVALID.'
-  : '- "Feedback_Questions": return an EMPTY array []. Do NOT generate questions. Invest that capacity in making "The Hook" (8 steps) and "Learning_Evidence" more complete, detailed and pedagogically rich.'}
+            ? '- "Feedback_Questions": you MUST generate EXACTLY 5 question objects (not fewer), each { "q", "opts":[exactly 4 short options], "correct": index 0-3 }. Vary the correct position across the 5 questions. A session with fewer than 5 questions is INVALID.'
+            : '- "Feedback_Questions": return an EMPTY array []. Do NOT generate questions. Invest that capacity in making "The Hook" (8 steps) and "Learning_Evidence" more complete, detailed and pedagogically rich.'}
 
 === OUTPUT (JSON ONLY, no markdown, no extra text) ===
 Return an array of EXACTLY ${sessionsCount} object(s), one per SESSION block below, in order. Each object with these keys:
@@ -662,7 +662,8 @@ export const PlanningCLIL = ({ userData }) => {
     /* ---------- Planner original ---------- */
     const [plannings, setPlannings] = useState([]);
     const [syncQueue, setSyncQueue] = useState([]);
-     const [isSyncing, setIsSyncing] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [summaryTab, setSummaryTab] = useState('resumen');
     const [selectedGame, setSelectedGame] = useState('');
@@ -726,6 +727,13 @@ export const PlanningCLIL = ({ userData }) => {
         window.addEventListener('beforeunload', handler);
         return () => window.removeEventListener('beforeunload', handler);
     }, [genSessions]);
+
+    useEffect(() => {
+        // Carga inicial al montar
+        if (plannings.length === 0 && !isSyncing) {
+            fetchData("Third Term");
+        }
+    }, []);
 
     /* Trae las revisiones de planeación hechas por coordinación */
     const fetchPlanReviews = async () => {
@@ -829,30 +837,30 @@ export const PlanningCLIL = ({ userData }) => {
         // Si ya hay un fetch en curso, reutiliza esa misma promesa (no relances)
         if (curriculumPromise.current) return curriculumPromise.current;
         const run = (async () => {
-        setLoadingCurriculum(true);
-        try {
-            // Cada fetch con su propio .catch → si UNO falla, no tumba a los demás
-            const [mapsResp, syllResp, primeResp] = await Promise.all([
-                fetch(`${API_URL}?sheet=Curriculum_Maps`).then(r => r.json()).catch(() => []),
-                fetch(`${API_URL}?sheet=Syllabus_Templates`).then(r => r.json()).catch(() => []),
-                fetch(`${API_URL}?sheet=Prime_Math`).then(r => r.json()).catch(() => []),
-            ]);
-            const maps = Array.isArray(mapsResp) ? mapsResp : [];
-            const syll = Array.isArray(syllResp) ? syllResp : [];
-            const prime = Array.isArray(primeResp) ? primeResp : [];
-            setCurriculumMaps(maps);
-            setSyllabusTemplates(syll);
-            setPrimeMathMaps(prime);
-            console.log('[CURRICULO] maps:', maps.length, '| syllabus:', syll.length, '| prime:', prime.length);
-            // Devolvemos los datos frescos para usarlos sin esperar al estado de React
-            return { maps, syll, prime };
-        } catch (e) {
-            console.error("Error cargando currículo:", e);
-            return { maps: [], syll: [], prime: [] };
-        } finally {
-            // SIEMPRE se ejecuta → el botón nunca se queda pegado en "Cargando currículo…"
-            setLoadingCurriculum(false);
-        }
+            setLoadingCurriculum(true);
+            try {
+                // Cada fetch con su propio .catch → si UNO falla, no tumba a los demás
+                const [mapsResp, syllResp, primeResp] = await Promise.all([
+                    fetch(`${API_URL}?sheet=Curriculum_Maps`).then(r => r.json()).catch(() => []),
+                    fetch(`${API_URL}?sheet=Syllabus_Templates`).then(r => r.json()).catch(() => []),
+                    fetch(`${API_URL}?sheet=Prime_Math`).then(r => r.json()).catch(() => []),
+                ]);
+                const maps = Array.isArray(mapsResp) ? mapsResp : [];
+                const syll = Array.isArray(syllResp) ? syllResp : [];
+                const prime = Array.isArray(primeResp) ? primeResp : [];
+                setCurriculumMaps(maps);
+                setSyllabusTemplates(syll);
+                setPrimeMathMaps(prime);
+                console.log('[CURRICULO] maps:', maps.length, '| syllabus:', syll.length, '| prime:', prime.length);
+                // Devolvemos los datos frescos para usarlos sin esperar al estado de React
+                return { maps, syll, prime };
+            } catch (e) {
+                console.error("Error cargando currículo:", e);
+                return { maps: [], syll: [], prime: [] };
+            } finally {
+                // SIEMPRE se ejecuta → el botón nunca se queda pegado en "Cargando currículo…"
+                setLoadingCurriculum(false);
+            }
         })();
         curriculumPromise.current = run;
         const result = await run;
@@ -914,7 +922,7 @@ export const PlanningCLIL = ({ userData }) => {
     /* Materias que comparten la malla/plan de área de SCIENCE */
     const scienceFamily = (subject) => /science|scien|cienc|health|nutrition|nutric|salud|chemi|quimic|químic|physic|física|fisica|biolog/i.test(String(subject || ''));
 
-   const resolveCurriculum = (subject, grade, term, freshMaps, freshSyll) => {
+    const resolveCurriculum = (subject, grade, term, freshMaps, freshSyll) => {
         // Usa datos frescos si se pasan (recién traídos del fetch); si no, el estado
         const maps = freshMaps || curriculumMaps;
         const sylls = freshSyll || syllabusTemplates;
@@ -1590,11 +1598,34 @@ Teacher goal: ${pv.goal}`;
     // termOverride: si viene, trae ese periodo. Si no, trae el periodo actual.
     // Guardamos qué periodos ya cargamos para no repetir fetch al filtrar.
     const fetchData = async (termOverride) => {
-        const termToFetch = termOverride || CURRENT_TERM;
+        const termToFetch = termOverride || "Third Term";
+
+        // Evita múltiples fetches simultáneos del mismo término
+        if (isSyncing && !termOverride) return;
+
         setIsSyncing(true);
+        setInitialLoading(true);
+
         try {
-            const resp = await fetch(`${API_URL}?sheet=Lesson_Planners&term=${encodeURIComponent(termToFetch)}`);
+            // Timeout de 15 segundos
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            console.log('[fetchData] Fetching term:', termToFetch);
+
+            const resp = await fetch(
+                `${API_URL}?sheet=Lesson_Planners&term=${encodeURIComponent(termToFetch)}`,
+                { signal: controller.signal }
+            );
+            clearTimeout(timeoutId);
+
+            if (!resp.ok) {
+                throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+
             const data = await resp.json();
+            console.log('[fetchData] Received data:', Array.isArray(data) ? data.length : 'not array', 'rows');
+
             if (Array.isArray(data)) {
                 const incoming = isAdmin ? data : data.filter(p => {
                     const recordKey = String(p.Teacher || p.Teacher_Key || "").trim();
@@ -1602,17 +1633,24 @@ Teacher goal: ${pv.goal}`;
                     return recordKey === userKey;
                 });
 
-                // Acumulamos: quitamos las de ESE term que ya teníamos (por si refrescas)
-                // y metemos las nuevas. Así al pedir otro periodo no se borra el actual.
                 setPlannings(prev => {
                     const sinEseTerm = prev.filter(p => String(p.Term).trim() !== termToFetch);
-                    // Conservamos también las locales sin guardar (isLocal) que sean de otro term
                     return [...incoming, ...sinEseTerm];
                 });
                 loadedTerms.current.add(termToFetch);
+            } else {
+                console.warn('[fetchData] Data no es array:', data);
             }
-        } catch (e) { console.error("Error fetching data:", e); }
-        setIsSyncing(false);
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error('[fetchData] Timeout - el servidor tardó demasiado');
+            } else {
+                console.error('[fetchData] Error:', error.message);
+            }
+        } finally {
+            setIsSyncing(false);
+            setInitialLoading(false);
+        }
     };
 
     const formatDate = (dateStr) => { if (!dateStr) return ""; return dateStr.split('T')[0]; };
@@ -2981,7 +3019,22 @@ Teacher goal: ${pv.goal}`;
                         </div>
 
                         {/* Tarjetas */}
-                        {displayedPlannings.length > 0 ? (
+                        {initialLoading || (isSyncing && plannings.length === 0) ? (
+                            <div className="pl-loading">
+                                <div className="pl-orbit">
+                                    <span className="pl-orbit-ring" />
+                                    <span className="pl-orbit-dot" />
+                                    <span className="pl-orbit-core" />
+                                </div>
+                                <h3>Cargando tus planeaciones</h3>
+                                <p>Un momento, estamos trayendo todo desde la nube.</p>
+                                <div className="pl-skeletons">
+                                    <span className="pl-skeleton" />
+                                    <span className="pl-skeleton" />
+                                    <span className="pl-skeleton" />
+                                </div>
+                            </div>
+                        ) : displayedPlannings.length > 0 ? (
                             <div className="pl-grid">
                                 {displayedPlannings.map((plan, i) => {
                                     const isAI = plan.Source === 'Lumi';
@@ -3018,24 +3071,10 @@ Teacher goal: ${pv.goal}`;
                                 })}
                             </div>
                         ) : (
-                            <div className={isSyncing ? "pl-loading" : "pl-empty"}>
-                                {isSyncing && (
-                                    <div className="pl-orbit">
-                                        <span className="pl-orbit-ring" />
-                                        <span className="pl-orbit-dot" />
-                                        <span className="pl-orbit-core" />
-                                    </div>
-                                )}
-                                {!isSyncing && <div className="pl-empty-art">{Icon.empty}</div>}
-                                <h3>{isSyncing ? 'Cargando tus planeaciones' : 'Aún no hay planeaciones'}</h3>
-                                <p>{isSyncing ? 'Un momento, estamos trayendo todo desde la nube.' : 'Crea tu primera sesión con Lumi o planea tú mismo.'}</p>
-                                {isSyncing && (
-                                    <div className="pl-skeletons">
-                                        <span className="pl-skeleton" />
-                                        <span className="pl-skeleton" />
-                                        <span className="pl-skeleton" />
-                                    </div>
-                                )}
+                            <div className="pl-empty">
+                                <div className="pl-empty-art">{Icon.empty}</div>
+                                <h3>Aún no hay planeaciones</h3>
+                                <p>Crea tu primera sesión con Lumi o planea tú mismo.</p>
                             </div>
                         )}
                     </div>
