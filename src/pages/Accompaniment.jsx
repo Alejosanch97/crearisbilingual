@@ -11,7 +11,7 @@ const ALL_GRADES = [
     "TENTH GRADE", "ELEVENTH GRADE"
 ];
 
-const norm = (v) => String(v || '').trim().toUpperCase();
+const norm = (v) => String(v || '').trim().toUpperCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
 const safeParse = (v) => { try { const p = JSON.parse(v || '[]'); return Array.isArray(p) ? p : []; } catch { return []; } };
 const fmtDate = (iso) => { if (!iso) return ''; const d = String(iso).split('T')[0].split('-'); return d.length === 3 ? `${+d[2]}/${+d[1]}` : iso; };
 
@@ -59,11 +59,13 @@ export const Accompaniment = ({ userData }) => {
     useEffect(() => { fetchStudents(); }, []);
 
     const filtered = useMemo(() => {
-        return students.filter(s =>
-            (!filterGrade || norm(s.Grade) === norm(filterGrade)) &&
-            (!search || norm(s.Student_Name).includes(norm(search)))
-        );
-    }, [students, filterGrade, search]);
+    console.log('filterGrade:', JSON.stringify(filterGrade), '→ norm:', norm(filterGrade));
+    console.log('grados en datos:', [...new Set(students.map(s => JSON.stringify(s.Grade) + ' → ' + norm(s.Grade)))]);
+    return students.filter(s =>
+        (!filterGrade || norm(s.Grade) === norm(filterGrade)) &&
+        (!search || norm(s.Student_Name).includes(norm(search)))
+    );
+}, [students, filterGrade, search]);
 
     /* ------- Actualiza un estudiante en el estado local ------- */
     const patchStudent = (id, patch) => {
