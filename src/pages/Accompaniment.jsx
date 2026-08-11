@@ -137,7 +137,11 @@ export const Accompaniment = ({ userData }) => {
                     <Search size={15} />
                     <input placeholder="Buscar por nombre…" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
-                <select value={filterGrade} onChange={e => setFilterGrade(e.target.value)}>
+                <select
+                    value={filterGrade}
+                    onChange={e => setFilterGrade(e.target.value)}
+                    autoComplete="off"
+                >
                     <option value="">Todos los grados</option>
                     {visibleGrades.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
@@ -155,6 +159,7 @@ export const Accompaniment = ({ userData }) => {
                 </div>
             ) : (
                 <div className="acc-grid">
+                    {console.log('RENDER CARDS →', filtered.length, filtered.map(s => s.Grade))}
                     {filtered.map(s => {
                         const asgs = safeParse(s.Assignments);
                         const obs = safeParse(s.Observations);
