@@ -160,6 +160,21 @@ const ASSESSMENT_DIMENSIONS = ["Saber y Pensar (45%)", "Hacer e Innovar (45%)", 
 const EVALUATION_INSTRUMENTS = ["Exit Ticket (formativa)", "Rúbrica", "Checklist", "Quiz", "Observación directa", "Simulacro tipo SABER", "Proyecto Maker", "Sustentación oral"];
 
 const norm = (v) => String(v || "").trim().toUpperCase();
+/* Convierte "First Term" → 1, "3" → 3, etc. para casar con Term_Number de Neuro */
+const termToNumber = (t) => {
+    const s = norm(t);
+    const map = { 'FIRST TERM': 1, 'SECOND TERM': 2, 'THIRD TERM': 3, 'FOURTH TERM': 4 };
+    if (map[s]) return map[s];
+    const m = s.match(/\d+/);
+    return m ? Number(m[0]) : null;
+};
+
+/* Parsea el Extra_Data_JSON de Neuro de forma segura */
+const parseNeuroExtra = (raw) => {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch { return {}; }
+};
 const safeParse = (val) => { if (!val) return null; if (typeof val === 'object') return val; try { return JSON.parse(val); } catch { return null; } };
 
 const clean = (t) => String(t || '').replace(/\[cite:.*?\]/g, '').trim();
@@ -644,6 +659,8 @@ export const PlanningCLIL = ({ userData }) => {
     const [syllabusTemplates, setSyllabusTemplates] = useState([]);
     const [loadingCurriculum, setLoadingCurriculum] = useState(false);
     const [primeMathMaps, setPrimeMathMaps] = useState([]);
+    const [neuroData, setNeuroData] = useState([]);
+    const [neuroLoaded, setNeuroLoaded] = useState(false);
 
 
     /* ---------- Estado del selector PR1ME Math ---------- */
@@ -674,6 +691,7 @@ export const PlanningCLIL = ({ userData }) => {
     const [savingReview, setSavingReview] = useState(false);
     const [reviewForm, setReviewForm] = useState({ score: 80, feedback: '', areas: '', next: '' });
     const [selectedSummary, setSelectedSummary] = useState(null);
+    const [neuroDay, setNeuroDay] = useState('');
     const [customFrame, setCustomFrame] = useState("");
     const [localCustomFrames, setLocalCustomFrames] = useState([]);
     const [filterGrade, setFilterGrade] = useState("");
@@ -693,7 +711,7 @@ export const PlanningCLIL = ({ userData }) => {
     const [selectedGrades, setSelectedGrades] = useState([]);
     const [formsData, setFormsData] = useState({});
 
-    useEffect(() => { fetchData(); fetchCurriculum(); fetchPlanReviews(); }, []);
+    useEffect(() => { fetchData(); fetchCurriculum(); fetchPlanReviews(); fetchNeuroData(); }, []);
     useEffect(() => {
         const scrollToEnd = () => {
             const el = chatEndRef.current;
@@ -744,6 +762,17 @@ export const PlanningCLIL = ({ userData }) => {
                 setPlanReviews(data.filter(r => String(r.ID_Lesson_Ref || '').startsWith('PLAN-')));
             }
         } catch (e) { console.error("Error cargando revisiones:", e); }
+    };
+
+    /* Trae la hoja Neuro_Stimulation (una sola vez, cacheada 6h en el backend) */
+    const fetchNeuroData = async () => {
+        if (neuroLoaded) return;
+        try {
+            const resp = await fetch(`${API_URL}?sheet=Neuro_Stimulation`);
+            const data = await resp.json();
+            if (Array.isArray(data)) setNeuroData(data);
+        } catch (e) { console.error("Error cargando neuroestimulación:", e); }
+        finally { setNeuroLoaded(true); }
     };
 
     // Restaurar planeación generada no guardada (sobrevive a cambios de pantalla / atrás)
@@ -3107,7 +3136,7 @@ Teacher goal: ${pv.goal}`;
                 };
 
                 return (
-                    <div className="modal-overlay" onClick={() => { setSelectedSummary(null); setSummaryTab('resumen'); setActiveGame(null); setSelectedGame(''); setShowReviewForm(false); }}>
+                    <div className="modal-overlay" onClick={() => { setSelectedSummary(null); setSummaryTab('resumen'); setActiveGame(null); setSelectedGame(''); setShowReviewForm(false); setNeuroDay(''); }}>
                         <div className="lesson-modal" onClick={e => e.stopPropagation()}>
 
                             {/* ===== CABECERA ===== */}
@@ -3138,6 +3167,7 @@ Teacher goal: ${pv.goal}`;
                                 <div className="lm-tabs">
                                     {[
                                         ['resumen', '📋 Resumen'],
+                                        ['neuro', '🧠 Neuroestimulación'],
                                         ['desarrollo', '🔄 Desarrollo'],
                                         ['recursos', '🎒 Recursos'],
                                         ['juego', '🎮 Warm-up Game'],
@@ -3281,6 +3311,111 @@ Teacher goal: ${pv.goal}`;
                                         </div>
                                     </div>
                                 )}
+
+                                {/* ---------- TAB NEUROESTIMULACIÓN ---------- */}
+                                {summaryTab === 'neuro' && (() => {
+                                    // Filtra la neuroestimulación por grado y periodo de la planeación
+                                    const planTermNum = termToNumber(p.Term);
+                                    const matches = neuroData.filter(n => {
+                                        const gradeOk = norm(n.Grade) === norm(p.Grade);
+                                        const termOk = planTermNum
+                                            ? termToNumber(n.Term) === planTermNum
+                                            : true;
+                                        return gradeOk && termOk;
+                                    });
+
+                                    // Días disponibles (Week + Day) ordenados
+                                    const dayOptions = matches.map(n => ({
+                                        id: String(n.ID_Neuro),
+                                        label: `Semana ${n.Week_Number} · ${n.Day_of_Week}`,
+                                        data: n
+                                    }));
+
+                                    const selected = neuroDay
+                                        ? matches.find(n => String(n.ID_Neuro) === neuroDay)
+                                        : (matches[0] || null);
+                                    const activeId = selected ? String(selected.ID_Neuro) : '';
+                                    const extra = selected ? parseNeuroExtra(selected.Extra_Data_JSON) : {};
+
+                                    // Convierte "Step 1: ... Step 2: ..." en pasos visuales
+                                    const neuroSteps = selected
+                                        ? parseHookSteps(selected.Instruction_Text)
+                                        : [];
+
+                                    return (
+                                        <div className="lm-pane">
+                                            {matches.length === 0 ? (
+                                                <p className="lm-empty">
+                                                    No hay actividades de neuroestimulación para {p.Grade} · {p.Term}.
+                                                </p>
+                                            ) : (
+                                                <>
+                                                    <span className="lm-section-title">Selecciona el día</span>
+                                                    <div className="neuro-day-picker">
+                                                        {dayOptions.map(opt => (
+                                                            <button
+                                                                key={opt.id}
+                                                                type="button"
+                                                                className={`neuro-day-chip ${activeId === opt.id ? 'on' : ''}`}
+                                                                onClick={() => setNeuroDay(opt.id)}
+                                                            >
+                                                                {opt.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {selected && (
+                                                        <>
+                                                            <div className="neuro-head">
+                                                                <div className="neuro-head-tags">
+                                                                    <span className="neuro-tag skill">{selected.Target_Skill}</span>
+                                                                    <span className="neuro-tag type">{selected.Activity_Type}</span>
+                                                                    <span className="neuro-tag lang">{selected.Language}</span>
+                                                                    {extra.duration && <span className="neuro-tag dur">⏱ {extra.duration}</span>}
+                                                                    {extra.level && <span className="neuro-tag level">{extra.level}</span>}
+                                                                </div>
+                                                                <h3 className="neuro-title">{selected.Title_Activity}</h3>
+                                                            </div>
+
+                                                            <span className="lm-section-title">Actividad paso a paso</span>
+                                                            {neuroSteps.length > 0 ? (
+                                                                <ol className="lm-steps">
+                                                                    {neuroSteps.map((s, i) => (
+                                                                        <li key={i} className="lm-step">
+                                                                            <div className="lm-step-marker">
+                                                                                <span className="lm-step-icon">{s.icon}</span>
+                                                                                <span className="lm-step-num">{i + 1}</span>
+                                                                            </div>
+                                                                            <div className="lm-step-body">
+                                                                                {s.title && <strong>{s.title}</strong>}
+                                                                                <p>{s.content}</p>
+                                                                            </div>
+                                                                        </li>
+                                                                    ))}
+                                                                </ol>
+                                                            ) : (
+                                                                <p className="lm-empty">Sin instrucciones registradas.</p>
+                                                            )}
+
+                                                            {selected.Resource_Link && selected.Resource_Link !== 'N/A' && (
+                                                                <>
+                                                                    <span className="lm-section-title">Recurso</span>
+                                                                    <div className="lm-resource-row">
+                                                                        <div className="lm-links">
+                                                                            <a href={selected.Resource_Link} target="_blank" rel="noreferrer">
+                                                                                🔗 Abrir recurso
+                                                                            </a>
+                                                                        </div>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* ---------- TAB DESARROLLO ---------- */}
                                 {summaryTab === 'desarrollo' && (

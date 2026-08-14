@@ -3467,6 +3467,84 @@
     font-weight: 700;
 }
 
+/* ===== Neuroestimulación (pestaña del resumen) ===== */
+.neuro-day-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.neuro-day-chip {
+    padding: 9px 15px;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #5b6883;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.neuro-day-chip:hover { transform: translateY(-1px); }
+.neuro-day-chip.on {
+    color: #fff;
+    background: linear-gradient(120deg, #4fa8c7, #8b6fd4);
+    border-color: transparent;
+    box-shadow: 0 5px 16px rgba(139, 111, 212, 0.26);
+}
+
+.neuro-head {
+    margin: 22px 0 8px;
+    padding: 20px 22px;
+    border-radius: 20px;
+    background: linear-gradient(120deg, rgba(139,111,212,0.24), rgba(79,168,199,0.18)), rgba(255,255,255,0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+}
+.neuro-head-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 12px;
+}
+.neuro-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+}
+.neuro-tag.skill { color: #6a4fc0; }
+.neuro-tag.type { color: #2b7d9b; }
+.neuro-tag.lang { color: #2c7a5f; }
+.neuro-tag.dur { color: #a8721f; }
+.neuro-tag.level { color: #5b6883; }
+.neuro-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #26304a;
+}
+
+@media (max-width: 660px) {
+    .neuro-day-picker {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding-bottom: 4px;
+    }
+    .neuro-day-picker::-webkit-scrollbar { display: none; }
+    .neuro-day-chip { flex: 0 0 auto; }
+}
+
 @media (max-width: 600px) {
   .review-dates { grid-template-columns: 1fr; }
 }
