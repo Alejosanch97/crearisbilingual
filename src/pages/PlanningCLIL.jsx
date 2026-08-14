@@ -711,7 +711,7 @@ export const PlanningCLIL = ({ userData }) => {
     const [selectedGrades, setSelectedGrades] = useState([]);
     const [formsData, setFormsData] = useState({});
 
-    useEffect(() => { fetchData(); fetchCurriculum(); fetchPlanReviews(); fetchNeuroData(); }, []);
+    useEffect(() => { fetchData(); fetchCurriculum(); fetchPlanReviews(); }, []);
     useEffect(() => {
         const scrollToEnd = () => {
             const el = chatEndRef.current;
@@ -746,12 +746,21 @@ export const PlanningCLIL = ({ userData }) => {
         return () => window.removeEventListener('beforeunload', handler);
     }, [genSessions]);
 
+    // (fetchData inicial ya se dispara en el useEffect de montaje de arriba)
+
+    // Carga la neuroestimulación SOLO la primera vez que el profe abre una planeación
     useEffect(() => {
-        // Carga inicial al montar
-        if (plannings.length === 0 && !isSyncing) {
-            fetchData("Third Term");
+        if (selectedSummary && !neuroLoaded) {
+            fetchNeuroData();
         }
-    }, []);
+    }, [selectedSummary, neuroLoaded]);
+
+    // Carga la neuroestimulación SOLO la primera vez que el profe abre una planeación
+    useEffect(() => {
+        if (selectedSummary && !neuroLoaded) {
+            fetchNeuroData();
+        }
+    }, [selectedSummary, neuroLoaded]);
 
     /* Trae las revisiones de planeación hechas por coordinación */
     const fetchPlanReviews = async () => {
@@ -768,7 +777,10 @@ export const PlanningCLIL = ({ userData }) => {
     const fetchNeuroData = async () => {
         if (neuroLoaded) return;
         try {
-            const resp = await fetch(`${API_URL}?sheet=Neuro_Stimulation`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const resp = await fetch(`${API_URL}?sheet=Neuro_Stimulation`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             const data = await resp.json();
             if (Array.isArray(data)) setNeuroData(data);
         } catch (e) { console.error("Error cargando neuroestimulación:", e); }
