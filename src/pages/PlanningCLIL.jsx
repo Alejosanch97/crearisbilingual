@@ -486,7 +486,9 @@ ${userRequest}
 3. Para DBA_Reference, SDG_Connection y Standard: elige de las listas de arriba la opción MÁS CERCANA al tema del docente (copiada literal). Si ninguna encaja perfecto, elige la más afín — es solo trazabilidad, no cambia el tema. Para Dimension, Principle (solo el nombre) y Value: elige uno literal de sus listas. No inventes referencias.
 4. "Vocabulary Big 5": exactamente 5 palabras separadas por coma.
 5. "Thinking Skill": 1-2 de: ${skillsList}
-6. "Language Frame": OBLIGATORIO. Genera 2-3 sentence starters (estructuras de lenguaje) que los estudiantes usarán en clase, adaptados al tema y al idioma de la planeación. Sepáralos con " / ". Guíate por estos ejemplos: ${framesList}
+6. "Language Frame": ${promptDef.lang === 'en'
+            ? 'OBLIGATORIO. Genera 2-3 sentence starters (estructuras de lenguaje) que los estudiantes usarán en clase, adaptados al tema y al idioma de la planeación. Sepáralos con " / ". Guíate por estos ejemplos: ${framesList}'
+            : 'DEJA ESTE CAMPO VACÍO "". NO generes Language Frames porque la planeación es en español.'}
 7. "Thinking Routine": OBLIGATORIO. Elige y nombra una rutina de pensamiento (ej: ${routinesList}) y desarróllala explícitamente dentro del paso de The Hook donde se aplica.
 8. "Parent Task": OBLIGATORIO. Una tarea corta y concreta para reforzar en casa, ligada al tema de la sesión.
 9. "Weekly Challenge": OBLIGATORIO. Un reto semanal motivador ligado al tema.
@@ -2466,13 +2468,15 @@ Teacher goal: ${pv.goal}`;
                                         {[
                                             ["Topic", "Tema", "text"], ["Objective", "Objetivo", "text"], ["The Hook", "Desarrollo (8 pasos)", "textarea"],
                                             ["Vocabulary Big 5", "Vocabulary Big 5", "text"], ["Thinking Skill", "Thinking Skill", "text"],
-                                            ["Language Frame", "Language Frame", "frames"], ["Thinking Routine", "Thinking Routine", "routine"],
+                                            // Language Frame SOLO se muestra si el prompt NO es en español
+                                            ...(currentPrompt?.lang !== 'es' ? [["Language Frame", "Language Frame", "frames"]] : []),
+                                            ["Thinking Routine", "Thinking Routine", "routine"],
                                             ["Parent Task", "Tarea / Parent Task", "text"], ["Weekly Challenge", "Weekly Challenge", "text"],
                                             ["DBA_Reference", "DBA", "text"], ["SDG_Connection", "ODS", "text"],
                                             ["Standard", "Estándar", "text"], ["Dimension", "Dimensión", "dimension"],
                                             ["Principle", "Principio CREAR", "principle"], ["Value", "Valor", "value"],
                                             ["Assessment_Dimension", "Dimensión SIEE", "assessment"], ["Evaluation_Instrument", "Instrumento", "instrument"],
-                                        ].map(([field, label, kind]) => {
+                                        ].filter(Boolean).map(([field, label, kind]) => {
                                             const OPTS = {
                                                 dimension: DIMENSIONS,
                                                 value: VALUES,
@@ -2839,47 +2843,57 @@ Teacher goal: ${pv.goal}`;
                                                         ))}
                                                     </div>
                                                 </div>
-                                                <div className="clil-box"><label>Language Frames</label>
-                                                    <div className="clil-custom-add" style={{ padding: '10px', display: 'flex', gap: '5px' }}>
-                                                        <input type="text" placeholder="Add custom frame..." value={customFrame} onChange={(e) => setCustomFrame(e.target.value)} style={{ fontSize: '0.8rem', flex: 1 }} />
-                                                        <button type="button" onClick={() => handleAddCustomFrame(grade)} className="btn-view" style={{ padding: '5px 10px' }}>+</button>
-                                                    </div>
-                                                    <div className="clil-scroll">
-                                                        {/* 1. Mostrar frames generados por IA (si existen) */}
-                                                        {(() => {
-                                                            const allFrames = Object.values(CLIL_RESOURCES.languageFrames).flat();
-                                                            const extras = (fd["Language Frame"] || []).filter(v => v && !allFrames.includes(v) && !localCustomFrames.includes(v));
-                                                            return extras.length > 0 && (
-                                                                <div className="clil-cat"><strong>✨ GENERADO POR LUMI</strong>
-                                                                    {extras.map(v => <div key={v} className="clil-option active" onClick={() => handleMultiSelect(grade, "Language Frame", v)}>{v}</div>)}
-                                                                </div>
-                                                            );
-                                                        })()}
-
-                                                        {/* 2. Mostrar frames personalizados por el usuario */}
-                                                        {localCustomFrames.length > 0 && (
-                                                            <div className="clil-cat"><strong>USER CUSTOM</strong>
-                                                                {localCustomFrames.map(cf => <div key={cf} className={`clil-option ${fd["Language Frame"]?.includes(cf) ? 'active' : ''}`} onClick={() => handleMultiSelect(grade, "Language Frame", cf)}>{cf}</div>)}
+                                                {/* Language Frames solo si es una materia en inglés O si el usuario ya tiene frames seleccionados */}
+                                                {(() => {
+                                                    const isEnglish = /english|ingles|literatura|reading/i.test(fd.Subject || '');
+                                                    const isSpanish = /español|castellano|sociales|historia|geografia|ciencias/i.test(fd.Subject || '');
+                                                    const hasFrames = (fd["Language Frame"] || []).length > 0;
+                                                    // En español, solo mostrar si el usuario ya agregó frames manualmente
+                                                    if (isSpanish && !hasFrames) return null;
+                                                    return (
+                                                        <div className="clil-box"><label>Language Frames</label>
+                                                            <div className="clil-custom-add" style={{ padding: '10px', display: 'flex', gap: '5px' }}>
+                                                                <input type="text" placeholder="Add custom frame..." value={customFrame} onChange={(e) => setCustomFrame(e.target.value)} style={{ fontSize: '0.8rem', flex: 1 }} />
+                                                                <button type="button" onClick={() => handleAddCustomFrame(grade)} className="btn-view" style={{ padding: '5px 10px' }}>+</button>
                                                             </div>
-                                                        )}
+                                                            <div className="clil-scroll">
+                                                                {/* 1. Mostrar frames generados por IA (si existen) */}
+                                                                {(() => {
+                                                                    const allFrames = Object.values(CLIL_RESOURCES.languageFrames).flat();
+                                                                    const extras = (fd["Language Frame"] || []).filter(v => v && !allFrames.includes(v) && !localCustomFrames.includes(v));
+                                                                    return extras.length > 0 && (
+                                                                        <div className="clil-cat"><strong>✨ GENERADO POR LUMI</strong>
+                                                                            {extras.map(v => <div key={v} className="clil-option active" onClick={() => handleMultiSelect(grade, "Language Frame", v)}>{v}</div>)}
+                                                                        </div>
+                                                                    );
+                                                                })()}
 
-                                                        {/* 3. ¡ESTO ES LO QUE TE FALTA! Mapear las categorías reales */}
-                                                        {Object.entries(CLIL_RESOURCES.languageFrames).map(([cat, frames]) => (
-                                                            <div key={cat} className="clil-cat">
-                                                                <strong>{cat.toUpperCase()}</strong>
-                                                                {frames.map(f => (
-                                                                    <div
-                                                                        key={f}
-                                                                        className={`clil-option ${fd["Language Frame"]?.includes(f) ? 'active' : ''}`}
-                                                                        onClick={() => handleMultiSelect(grade, "Language Frame", f)}
-                                                                    >
-                                                                        {f}
+                                                                {/* 2. Mostrar frames personalizados por el usuario */}
+                                                                {localCustomFrames.length > 0 && (
+                                                                    <div className="clil-cat"><strong>USER CUSTOM</strong>
+                                                                        {localCustomFrames.map(cf => <div key={cf} className={`clil-option ${fd["Language Frame"]?.includes(cf) ? 'active' : ''}`} onClick={() => handleMultiSelect(grade, "Language Frame", cf)}>{cf}</div>)}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* 3. ¡ESTO ES LO QUE TE FALTA! Mapear las categorías reales */}
+                                                                {Object.entries(CLIL_RESOURCES.languageFrames).map(([cat, frames]) => (
+                                                                    <div key={cat} className="clil-cat">
+                                                                        <strong>{cat.toUpperCase()}</strong>
+                                                                        {frames.map(f => (
+                                                                            <div
+                                                                                key={f}
+                                                                                className={`clil-option ${fd["Language Frame"]?.includes(f) ? 'active' : ''}`}
+                                                                                onClick={() => handleMultiSelect(grade, "Language Frame", f)}
+                                                                            >
+                                                                                {f}
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
                                                                 ))}
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
 
                                             <div className="grid-3">
